@@ -1,0 +1,8 @@
+*.o
+*.a
+*.so
+lua
+luac
+lua-5.3.4-tests/libs/*.h
+lua-5.3.4-tests/time.txt
+
