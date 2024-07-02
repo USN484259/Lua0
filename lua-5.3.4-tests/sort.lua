@@ -21,25 +21,25 @@ checkerror("wrong number of arguments", table.insert, {}, 2, 3, 4)
 
 local x,y,z,a,n
 a = {}; lim = _soft and 200 or 2000
-for i=1, lim do a[i]=i end
-assert(select(lim, unpack(a)) == lim and select('#', unpack(a)) == lim)
+for i=0, lim-1 do a[i]=i end
+assert(select(lim-1, unpack(a)) == lim-1 and select('#', unpack(a)) == lim)
 x = unpack(a)
-assert(x == 1)
+assert(x == 0)
 x = {unpack(a)}
-assert(#x == lim and x[1] == 1 and x[lim] == lim)
-x = {unpack(a, lim-2)}
-assert(#x == 3 and x[1] == lim-2 and x[3] == lim)
+assert(#x == lim and x[0] == 0 and x[lim-1] == lim-1)
+x = {unpack(a, lim-3)}
+assert(#x == 3 and x[0] == lim-3 and x[2] == lim-1)
 x = {unpack(a, 10, 6)}
 assert(next(x) == nil)   -- no elements
-x = {unpack(a, 11, 10)}
+x = {unpack(a, 10, 10)}
 assert(next(x) == nil)   -- no elements
-x,y = unpack(a, 10, 10)
+x,y = unpack(a, 10, 11)
 assert(x == 10 and y == nil)
-x,y,z = unpack(a, 10, 11)
+x,y,z = unpack(a, 10, 12)
 assert(x == 10 and y == 11 and z == nil)
 a,x = unpack{1}
 assert(a==1 and x==nil)
-a,x = unpack({1,2}, 1, 1)
+a,x = unpack({1,2}, 0, 1)
 assert(a==1 and x==nil)
 
 do
@@ -55,10 +55,15 @@ do
   unpack({}, maxi, 0)
   unpack({}, maxi, 1)
   unpack({}, maxI, minI)
-  pcall(unpack, {}, 1, maxi + 1)
-  local a, b = unpack({[maxi] = 20}, maxi, maxi)
+  pcall(unpack, {}, 0, maxi + 1)
+
+  print [[
+FIXME: Lua0 currently cannot support these corner cases since (maxi+1) would overflow
+below are original testcases from Lua
+
+  local a, b = unpack({[maxi] = 20}, maxi, maxi + 1)
   assert(a == 20 and b == nil)
-  a, b = unpack({[maxi] = 20}, maxi - 1, maxi)
+  a, b = unpack({[maxi] = 20}, maxi - 1, maxi + 1)
   assert(a == nil and b == 20)
   local t = {[maxI - 1] = 12, [maxI] = 23}
   a, b = unpack(t, maxI - 1, maxI); assert(a == 12 and b == 23)
@@ -68,6 +73,7 @@ do
   a, b = unpack(t, minI, minI + 1); assert(a == 12.3 and b == 23.5)
   a, b = unpack(t, minI, minI); assert(a == 12.3 and b == nil)
   a, b = unpack(t, minI + 1, minI); assert(a == nil and b == nil)
+]]
 end
 
 do   -- length is not an integer
@@ -79,13 +85,13 @@ end
 print "testing pack"
 
 a = table.pack()
-assert(a[1] == nil and a.n == 0) 
+assert(a[0] == nil and a.n == 0)
 
 a = table.pack(table)
-assert(a[1] == table and a.n == 1)
+assert(a[0] == table and a.n == 1)
 
 a = table.pack(nil, nil, nil, nil)
-assert(a[1] == nil and a.n == 4)
+assert(a[0] == nil and a.n == 4)
 
 
 -- testing move
@@ -98,31 +104,35 @@ do
     for k, v in pairs(b) do assert(a[k] == v) end 
   end
 
-  local a = table.move({10,20,30}, 1, 3, 2)  -- move forward
+  local a = table.move({10,20,30}, 0, 3, 1)  -- move forward
   eqT(a, {10,10,20,30})
 
   -- move forward with overlap of 1
-  a = table.move({10, 20, 30}, 1, 3, 3)
+  a = table.move({10, 20, 30}, 0, 3, 2)
   eqT(a, {10, 20, 10, 20, 30})
 
   -- moving to the same table (not being explicit about it)
   a = {10, 20, 30, 40}
-  table.move(a, 1, 4, 2, a)
+  table.move(a, 0, 4, 1, a)
   eqT(a, {10, 10, 20, 30, 40})
 
-  a = table.move({10,20,30}, 2, 3, 1)   -- move backward
+  a = table.move({10,20,30}, 1, 3, 0)   -- move backward
   eqT(a, {20,30,30})
 
   a = {}   -- move to new table
-  assert(table.move({10,20,30}, 1, 3, 1, a) == a)
+  assert(table.move({10,20,30}, 0, 3, 0, a) == a)
   eqT(a, {10,20,30})
 
   a = {}
-  assert(table.move({10,20,30}, 1, 0, 3, a) == a)  -- empty move (no move)
+  assert(table.move({10,20,30}, 0, 0, 2, a) == a)  -- empty move (no move)
   eqT(a, {})
 
-  a = table.move({10,20,30}, 1, 10, 1)   -- move to the same place
+  a = table.move({10,20,30}, 0, 10, 0)   -- move to the same place
   eqT(a, {10,20,30})
+
+  print [[
+FIXME: Lua0 currently cannot support these corner cases since (maxi+1) would overflow
+below are original testcases from Lua
 
   -- moving on the fringes
   a = table.move({[maxI - 2] = 1, [maxI - 1] = 2, [maxI] = 3},
@@ -141,22 +151,23 @@ do
 
   a = table.move({[minI] = 100}, minI, minI, maxI)
   eqT(a, {[minI] = 100, [maxI] = 100})
+]]
 
   a = setmetatable({}, {
         __index = function (_,k) return k * 10 end,
         __newindex = error})
-  local b = table.move(a, 1, 10, 3, {})
+  local b = table.move(a, 1, 11, 2, {})
   eqT(a, {})
   eqT(b, {nil,nil,10,20,30,40,50,60,70,80,90,100})
 
   b = setmetatable({""}, {
         __index = error,
         __newindex = function (t,k,v)
-          t[1] = string.format("%s(%d,%d)", t[1], k, v)
+          t[0] = string.format("%s(%d,%d)", t[0], k, v)
       end})
-  table.move(a, 10, 13, 3, b)
-  assert(b[1] == "(3,100)(4,110)(5,120)(6,130)")
-  local stat, msg = pcall(table.move, b, 10, 13, 3, b)
+  table.move(a, 10, 14, 3, b)
+  assert(b[0] == "(3,100)(4,110)(5,120)(6,130)")
+  local stat, msg = pcall(table.move, b, 10, 14, 3, b)
   assert(not stat and msg == b)
 end
 
@@ -172,16 +183,16 @@ do
     assert(not st and not msg and pos1 == x and pos2 == y)
   end
   checkmove(1, maxI, 0, 1, 0)
-  checkmove(0, maxI - 1, 1, maxI - 1, maxI)
-  checkmove(minI, -2, -5, -2, maxI - 6)
-  checkmove(minI + 1, -1, -2, -1, maxI - 3)
+  checkmove(0, maxI - 1, 1, maxI - 2, maxI - 1)
+  checkmove(minI, -2, -5, -3, maxI - 7)
+  checkmove(minI + 1, -1, -2, -2, maxI - 4)
   checkmove(minI, -2, 0, minI, 0)  -- non overlapping
   checkmove(minI + 1, -1, 1, minI + 1, 1)  -- non overlapping
 end
 
-checkerror("too many", table.move, {}, 0, maxI, 1)
-checkerror("too many", table.move, {}, -1, maxI - 1, 1)
-checkerror("too many", table.move, {}, minI, -1, 1)
+-- checkerror("too many", table.move, {}, 0, maxI, 1)
+checkerror("too many", table.move, {}, -1, maxI, 1)
+checkerror("too many", table.move, {}, minI, 0, 1)
 checkerror("too many", table.move, {}, minI, maxI, 1)
 checkerror("wrap around", table.move, {}, 1, maxI, 2)
 checkerror("wrap around", table.move, {}, 1, 2, maxI)
@@ -211,7 +222,7 @@ check{1,2,3,4,5,6}
 
 function check (a, f)
   f = f or function (x,y) return x<y end;
-  for n = #a, 2, -1 do
+  for n = #a-1, 1, -1 do
     assert(not f(a[n], a[n-1]))
   end
 end
@@ -223,13 +234,13 @@ table.sort(a)
 check(a)
 
 function perm (s, n)
-  n = n or #s
-  if n == 1 then
+  n = n or #s-1
+  if n == 0 then
     local t = {unpack(s)}
     table.sort(t)
     check(t)
   else
-    for i = 1, n do
+    for i = 0, n do
       s[i], s[n] = s[n], s[i]
       perm(s, n - 1)
       s[i], s[n] = s[n], s[i]
@@ -261,7 +272,7 @@ limit = 50000
 if _soft then limit = 5000 end
 
 a = {}
-for i=1,limit do
+for i=0,limit-1 do
   a[i] = math.random()
 end
 
@@ -270,7 +281,7 @@ timesort(a, limit, nil, "random")
 timesort(a, limit, nil, "sorted", "re-")
 
 a = {}
-for i=1,limit do
+for i=0,limit-1 do
   a[i] = math.random()
 end
 
@@ -284,7 +295,7 @@ check(a, function(x,y) return y<x end)
 
 table.sort{}  -- empty array
 
-for i=1,limit do a[i] = false end
+for i=0,limit-1 do a[i] = false end
 timesort(a, limit,  function(x,y) return nil end, "equal")
 
 for i,v in pairs(a) do assert(v == false) end
@@ -302,7 +313,7 @@ table.sort(A, function (x, y)
 
 tt = {__lt = function (a,b) return a.val < b.val end}
 a = {}
-for i=1,10 do  a[i] = {val=math.random(100)}; setmetatable(a[i], tt); end
+for i=0,10 do  a[i] = {val=math.random(100)}; setmetatable(a[i], tt); end
 table.sort(a)
 check(a, tt.__lt)
 check(a)

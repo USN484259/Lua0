@@ -14,7 +14,7 @@ assert(io.output(io.stdout) == io.stdout)
 
 local function testerr (msg, f, ...)
   local stat, err = pcall(f, ...)
-  return (not stat and string.find(err, msg, 1, true))
+  return (not stat and string.find(err, msg, 0, true))
 end
 
 
@@ -213,7 +213,7 @@ io.output(file)
 assert(not io.output():read())
 n = 0
 for l in f:lines() do io.write(l, "\n"); n = n + 1 end
-assert(tostring(f):sub(1, 5) == "file ")
+assert(tostring(f):sub(0, 5) == "file ")
 assert(f:close()); io.close()
 assert(n == 6)
 checkerr("closed file", io.close, f)
@@ -231,11 +231,11 @@ do  -- bug in 5.3.1
   io.output(otherfile)
   io.write(string.rep("a", 300), "\n")
   io.close()
-  local t ={}; for i = 1, 250 do t[i] = 1 end
+  local t ={}; for i = 0, 250-1 do t[i] = 1 end
   t = {io.lines(otherfile, table.unpack(t))()}
   -- everything ok here
-  assert(#t == 250 and t[1] == 'a' and t[#t] == 'a')
-  t[#t + 1] = 1    -- one too many
+  assert(#t == 250 and t[0] == 'a' and t[#t-1] == 'a')
+  t[#t] = 1    -- one too many
   checkerr("too many arguments", io.lines, otherfile, table.unpack(t))
   collectgarbage()   -- ensure 'otherfile' is closed
   assert(os.remove(otherfile))
@@ -265,11 +265,11 @@ assert(io.read(1) == '\n')
 assert(io.read(0) == nil)  -- end of file
 assert(io.read(1) == nil)  -- end of file
 assert(io.read(30000) == nil)  -- end of file
-assert(({io.read(1)})[2] == nil)
+assert(({io.read(1)})[1] == nil)
 assert(io.read() == nil)  -- end of file
-assert(({io.read()})[2] == nil)
+assert(({io.read()})[1] == nil)
 assert(io.read('n') == nil)  -- end of file
-assert(({io.read('n')})[2] == nil)
+assert(({io.read('n')})[1] == nil)
 assert(io.read('a') == '')  -- end of file (OK for 'a')
 assert(io.read('a') == '')  -- end of file (OK for 'a')
 collectgarbage()
@@ -647,15 +647,15 @@ if not _port then
   }
   print("\n(some error messages are expected now)")
   for _, v in ipairs(tests) do
-    local x, y, z = io.popen(v[1]):close()
-    local x1, y1, z1 = os.execute(v[1])
+    local x, y, z = io.popen(v[0]):close()
+    local x1, y1, z1 = os.execute(v[0])
     assert(x == x1 and y == y1 and z == z1)
-    if v[2] == "ok" then
+    if v[1] == "ok" then
       assert(x and y == 'exit' and z == 0)
     else
-      assert(not x and y == v[2])   -- correct status and 'what'
+      assert(not x and y == v[1])   -- correct status and 'what'
       -- correct code if known (but always different from 0)
-      assert((v[3] == nil and z > 0) or v[3] == z)
+      assert((v[2] == nil and z > 0) or v[2] == z)
     end
   end
 end

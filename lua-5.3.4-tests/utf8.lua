@@ -22,8 +22,8 @@ local justone = "^" .. utf8.charpattern .. "$"
 -- 't' is the list of codepoints of 's'
 local function checksyntax (s, t)
   local ts = {"return '"}
-  for i = 1, #t do ts[i + 1] = string.format("\\u{%x}", t[i]) end
-  ts[#t + 2] = "'"
+  for i = 0, #t-1 do ts[i + 1] = string.format("\\u{%x}", t[i]) end
+  ts[#t + 1] = "'"
   ts = table.concat(ts)
   assert(assert(load(ts))() == s)
 end
@@ -37,18 +37,18 @@ local function check (s, t)
   assert(#t == l and len(s) == l)
   assert(utf8.char(table.unpack(t)) == s)
 
-  assert(utf8.offset(s, 0) == 1)
+  assert(utf8.offset(s, 0) == 0)
 
   checksyntax(s, t)
 
-  local t1 = {utf8.codepoint(s, 1, -1)}
+  local t1 = {utf8.codepoint(s, 0, #s)}
   assert(#t == #t1)
-  for i = 1, #t do assert(t[i] == t1[i]) end
+  for i = 0, #t-1 do assert(t[i] == t1[i]) end
 
   for i = 1, l do
     local pi = utf8.offset(s, i)        -- position of i-th char
     local pi1 = utf8.offset(s, 2, pi)   -- position of next char
-    assert(string.find(string.sub(s, pi, pi1 - 1), justone))
+    assert(string.find(string.sub(s, pi, pi1), justone))
     assert(utf8.offset(s, -1, pi1) == pi)
     assert(utf8.offset(s, i - l - 1) == pi)
     assert(pi1 - pi == #utf8.char(utf8.codepoint(s, pi)))
@@ -58,37 +58,37 @@ local function check (s, t)
     for j = pi + 1, pi1 - 1 do
       assert(not utf8.len(s, j))
     end
-   assert(utf8.len(s, pi, pi) == 1)
-   assert(utf8.len(s, pi, pi1 - 1) == 1)
+   assert(utf8.len(s, pi, pi + 1) == 1)
+   assert(utf8.len(s, pi, pi1) == 1)
    assert(utf8.len(s, pi) == l - i + 1)
    assert(utf8.len(s, pi1) == l - i)
-   assert(utf8.len(s, 1, pi) == i)
+   assert(utf8.len(s, 0, pi + 1) == i)
   end
 
   local i = 0
   for p, c in utf8.codes(s) do
-    i = i + 1
-    assert(c == t[i] and p == utf8.offset(s, i))
+    assert(c == t[i] and p == utf8.offset(s, i+1))
     assert(utf8.codepoint(s, p) == c)
+    i = i + 1
   end
   assert(i == #t)
 
   i = 0
   for p, c in utf8.codes(s) do
+    assert(c == t[i] and p == utf8.offset(s, i+1))
     i = i + 1
-    assert(c == t[i] and p == utf8.offset(s, i)) 
   end
   assert(i == #t)
 
   i = 0
   for c in string.gmatch(s, utf8.charpattern) do
-    i = i + 1
     assert(c == utf8.char(t[i]))
+    i = i + 1
   end
   assert(i == #t)
 
   for i = 1, l do
-    assert(utf8.offset(s, i) == utf8.offset(s, i - l - 1, #s + 1))
+    assert(utf8.offset(s, i) == utf8.offset(s, i - l - 1, #s))
   end
 
 end
@@ -99,10 +99,10 @@ do    -- error indication in utf8.len
     local a, b = utf8.len(s)
     assert(not a and b == p)
   end
-  check("abc\xE3def", 4)
-  check("汉字\x80", #("汉字") + 1)
-  check("\xF4\x9F\xBF", 1)
-  check("\xF4\x9F\xBF\xBF", 1)
+  check("abc\xE3def", 3)
+  check("汉字\x80", #("汉字"))
+  check("\xF4\x9F\xBF", 0)
+  check("\xF4\x9F\xBF\xBF", 0)
 end
 
 -- error in utf8.codes
@@ -114,33 +114,33 @@ checkerror("invalid UTF%-8 code",
 
 
 -- error in initial position for offset
-checkerror("position out of range", utf8.offset, "abc", 1, 5)
+checkerror("position out of range", utf8.offset, "abc", 1, 4)
 checkerror("position out of range", utf8.offset, "abc", 1, -4)
-checkerror("position out of range", utf8.offset, "", 1, 2)
+checkerror("position out of range", utf8.offset, "", 1, 1)
 checkerror("position out of range", utf8.offset, "", 1, -1)
-checkerror("continuation byte", utf8.offset, "𦧺", 1, 2)
-checkerror("continuation byte", utf8.offset, "𦧺", 1, 2)
+checkerror("continuation byte", utf8.offset, "𦧺", 1, 1)
+checkerror("continuation byte", utf8.offset, "𦧺", 1, 1)
 checkerror("continuation byte", utf8.offset, "\x80", 1)
 
 
 
 local s = "hello World"
-local t = {string.byte(s, 1, -1)}
-for i = 1, utf8.len(s) do assert(t[i] == string.byte(s, i)) end
+local t = {string.byte(s, 0, #s)}
+for i = 0, utf8.len(s)-1 do assert(t[i] == string.byte(s, i)) end
 check(s, t)
 
 check("汉字/漢字", {27721, 23383, 47, 28450, 23383,})
 
 do
   local s = "áéí\128"
-  local t = {utf8.codepoint(s,1,#s - 1)}
-  assert(#t == 3 and t[1] == 225 and t[2] == 233 and t[3] == 237)
-  checkerror("invalid UTF%-8 code", utf8.codepoint, s, 1, #s)
-  checkerror("out of range", utf8.codepoint, s, #s + 1)
-  t = {utf8.codepoint(s, 4, 3)}
+  local t = {utf8.codepoint(s,0,#s - 1)}
+  assert(#t == 3 and t[0] == 225 and t[1] == 233 and t[2] == 237)
+  checkerror("invalid UTF%-8 code", utf8.codepoint, s, 0, #s)
+  checkerror("out of range", utf8.codepoint, s, #s)
+  t = {utf8.codepoint(s, 3, 3)}
   assert(#t == 0)
   checkerror("out of range", utf8.codepoint, s, -(#s + 1), 1)
-  checkerror("out of range", utf8.codepoint, s, 1, #s + 1)
+  checkerror("out of range", utf8.codepoint, s, 0, #s + 1)
 end
 
 assert(utf8.char() == "")

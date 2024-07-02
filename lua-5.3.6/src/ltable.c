@@ -138,14 +138,16 @@ static Node *mainposition (const Table *t, const TValue *key) {
 
 
 /*
-** returns the index for 'key' if 'key' is an appropriate key to live in
+** get the index for 'key' and return 1 if 'key' is an appropriate key to live in
 ** the array part of the table, 0 otherwise.
 */
-static unsigned int arrayindex (const TValue *key) {
+static unsigned int arrayindex (const TValue *key, unsigned int *pindex) {
   if (ttisinteger(key)) {
     lua_Integer k = ivalue(key);
-    if (0 < k && (lua_Unsigned)k <= MAXASIZE)
-      return cast(unsigned int, k);  /* 'key' is an appropriate array index */
+    if (0 <= k && (lua_Unsigned)k < MAXASIZE) {
+      *pindex = cast(unsigned int, k);  /* 'key' is an appropriate array index */
+      return 1;
+    }
   }
   return 0;  /* 'key' did not match some condition */
 }
@@ -159,9 +161,8 @@ static unsigned int arrayindex (const TValue *key) {
 static unsigned int findindex (lua_State *L, Table *t, StkId key) {
   unsigned int i;
   if (ttisnil(key)) return 0;  /* first iteration */
-  i = arrayindex(key);
-  if (i != 0 && i <= t->sizearray)  /* is 'key' inside array part? */
-    return i;  /* yes; that's the index */
+  if (arrayindex(key, &i) && i < t->sizearray)  /* is 'key' inside array part? */
+    return i + 1;  /* yes; that's the index */
   else {
     int nx;
     Node *n = mainposition(t, key);
@@ -187,7 +188,7 @@ int luaH_next (lua_State *L, Table *t, StkId key) {
   unsigned int i = findindex(L, t, key);  /* find original element */
   for (; i < t->sizearray; i++) {  /* try first array part */
     if (!ttisnil(&t->array[i])) {  /* a non-nil value? */
-      setivalue(key, i + 1);
+      setivalue(key, i);
       setobj2s(L, key+1, &t->array[i]);
       return 1;
     }
@@ -241,9 +242,9 @@ static unsigned int computesizes (unsigned int nums[], unsigned int *pna) {
 
 
 static int countint (const TValue *key, unsigned int *nums) {
-  unsigned int k = arrayindex(key);
-  if (k != 0) {  /* is 'key' an appropriate array index? */
-    nums[luaO_ceillog2(k)]++;  /* count as such */
+  unsigned int k;
+  if (arrayindex(key, &k)) {  /* is 'key' an appropriate array index? */
+    nums[luaO_ceillog2(k + 1)]++;  /* count as such */
     return 1;
   }
   else
@@ -260,19 +261,19 @@ static unsigned int numusearray (const Table *t, unsigned int *nums) {
   int lg;
   unsigned int ttlg;  /* 2^lg */
   unsigned int ause = 0;  /* summation of 'nums' */
-  unsigned int i = 1;  /* count to traverse all array keys */
+  unsigned int i = 0;  /* count to traverse all array keys */
   /* traverse each slice */
   for (lg = 0, ttlg = 1; lg <= MAXABITS; lg++, ttlg *= 2) {
     unsigned int lc = 0;  /* counter */
     unsigned int lim = ttlg;
     if (lim > t->sizearray) {
       lim = t->sizearray;  /* adjust upper limit */
-      if (i > lim)
+      if (i >= lim)
         break;  /* no more elements to count */
     }
     /* count elements in range (2^(lg - 1), 2^lg] */
-    for (; i <= lim; i++) {
-      if (!ttisnil(&t->array[i-1]))
+    for (; i < lim; i++) {
+      if (!ttisnil(&t->array[i]))
         lc++;
     }
     nums[lg] += lc;
@@ -365,7 +366,7 @@ void luaH_resize (lua_State *L, Table *t, unsigned int nasize,
     /* re-insert elements from vanishing slice */
     for (i=nasize; i<oldasize; i++) {
       if (!ttisnil(&t->array[i]))
-        luaH_setint(L, t, i + 1, &t->array[i]);
+        luaH_setint(L, t, i, &t->array[i]);
     }
     /* shrink array */
     luaM_reallocvector(L, t->array, oldasize, nasize, TValue);
@@ -514,9 +515,9 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
 ** search function for integers
 */
 const TValue *luaH_getint (Table *t, lua_Integer key) {
-  /* (1 <= key && key <= t->sizearray) */
-  if (l_castS2U(key) - 1 < t->sizearray)
-    return &t->array[key - 1];
+  /* (0 <= key && key < t->sizearray) */
+  if (l_castS2U(key) < t->sizearray)
+    return &t->array[key];
   else {
     Node *n = hashint(t, key);
     for (;;) {  /* check whether 'key' is somewhere in the chain */
@@ -631,15 +632,17 @@ void luaH_setint (lua_State *L, Table *t, lua_Integer key, TValue *value) {
 
 static lua_Unsigned unbound_search (Table *t, lua_Unsigned j) {
   lua_Unsigned i = j;  /* i is zero or a present index */
+  if (ttisnil(luaH_getint(t, i)))
+    return i;
   j++;
   /* find 'i' and 'j' such that i is present and j is not */
   while (!ttisnil(luaH_getint(t, j))) {
     i = j;
     if (j > l_castS2U(LUA_MAXINTEGER) / 2) {  /* overflow? */
       /* table was built with bad purposes: resort to linear search */
-      i = 1;
+      i = 0;
       while (!ttisnil(luaH_getint(t, i))) i++;
-      return i - 1;
+      return i;
     }
     j *= 2;
   }
@@ -649,25 +652,27 @@ static lua_Unsigned unbound_search (Table *t, lua_Unsigned j) {
     if (ttisnil(luaH_getint(t, m))) j = m;
     else i = m;
   }
-  return i;
+  return j;
 }
 
 
 /*
 ** Try to find a boundary in table 't'. A 'boundary' is an integer index
-** such that t[i] is non-nil and t[i+1] is nil (and 0 if t[1] is nil).
+** such that t[i-1] is non-nil and t[i] is nil (and 0 if t[0] is nil).
 */
 lua_Unsigned luaH_getn (Table *t) {
   unsigned int j = t->sizearray;
   if (j > 0 && ttisnil(&t->array[j - 1])) {
     /* there is a boundary in the array part: (binary) search for it */
     unsigned int i = 0;
+    if (ttisnil(&t->array[i]))
+      return 0;
     while (j - i > 1) {
       unsigned int m = (i+j)/2;
-      if (ttisnil(&t->array[m - 1])) j = m;
+      if (ttisnil(&t->array[m])) j = m;
       else i = m;
     }
-    return i;
+    return j;
   }
   /* else must find a boundary in hash part */
   else if (isdummy(t))  /* hash part is empty? */

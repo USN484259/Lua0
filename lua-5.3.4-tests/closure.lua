@@ -72,7 +72,7 @@ assert(a[2].get() == 'a')
 a = {}
 local t = {"a", "b"}
 for i = 1, #t do
-  local k = t[i]
+  local k = t[i-1]
   a[i] = {set = function(x, y) i=x; k=y end,
           get = function () return i, k end}
   if i == 2 then break end
@@ -95,12 +95,12 @@ end
 assert(f() == 1)
 
 for k = 1, #t do
-  local v = t[k]
+  local v = t[k-1]
   f = function () return k, v end
   break
 end
-assert(({f()})[1] == 1)
-assert(({f()})[2] == "a")
+assert(({f()})[0] == 1)
+assert(({f()})[1] == "a")
 
 
 -- testing closure x break x return x errors

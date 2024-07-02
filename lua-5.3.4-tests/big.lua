@@ -11,18 +11,18 @@ local debug = require"debug"
 
 local lim = 2^18 + 1000
 local prog = { "local y = {0" }
-for i = 1, lim do prog[#prog + 1] = i  end
-prog[#prog + 1] = "}\n"
-prog[#prog + 1] = "X = y\n"
-prog[#prog + 1] = ("assert(X[%d] == %d)"):format(lim - 1, lim - 2)
-prog[#prog + 1] = "return 0"
+for i = 0, lim-1 do prog[#prog] = i  end
+prog[#prog] = "}\n"
+prog[#prog] = "X = y\n"
+prog[#prog] = ("assert(X[%d] == %d)"):format(lim - 1, lim - 2)
+prog[#prog] = "return 0"
 prog = table.concat(prog, ";")
 
 local env = {string = string, assert = assert}
 local f = assert(load(prog, nil, nil, env))
 
 f()
-assert(env.X[lim] == lim - 1 and env.X[lim + 1] == lim)
+assert(env.X[lim - 1] == lim - 2 and env.X[lim] == lim - 1)
 for k in pairs(env) do env[k] = nil end
 
 -- yields during accesses larger than K (in RK)
@@ -38,7 +38,7 @@ assert(co() == 'g')
 assert(co() == 'g')
 assert(co() == 0)
 
-assert(X[lim] == lim - 1 and X[lim + 1] == lim)
+assert(X[lim - 1] == lim - 2 and X[lim] == lim - 1)
 
 -- errors in accesses larger than K (in RK)
 getmetatable(env).__index = function () end

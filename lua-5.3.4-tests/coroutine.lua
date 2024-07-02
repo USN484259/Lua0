@@ -23,7 +23,7 @@ assert(not pcall(coroutine.status, 0))
 
 local function eqtab (t1, t2)
   assert(#t1 == #t2)
-  for i = 1, #t1 do
+  for i = 0, #t1-1 do
     local v = t1[i]
     assert(t2[i] == v)
   end
@@ -39,7 +39,7 @@ function foo (a, ...)
   assert(coroutine.status(f) == "running")
   local arg = {...}
   assert(coroutine.isyieldable())
-  for i=1,#arg do
+  for i=0,#arg-1 do
     _G.x = {coroutine.yield(table.unpack(arg[i]))}
   end
   return table.unpack(a)
@@ -116,7 +116,7 @@ while 1 do
   x = filter(n, x)
 end
 
-assert(#a == 25 and a[#a] == 97)
+assert(#a == 25 and a[#a-1] == 97)
 x, a = nil
 
 -- yielding across C boundaries
@@ -146,11 +146,11 @@ local f1 = coroutine.wrap(function ()
 f1()
 for i = 1, 10 do assert(f1(i) == i) end
 local r1, r2, v = f1(nil)
-assert(r1 and not r2 and v[1] ==  (10 + 1)*10/2)
+assert(r1 and not r2 and v[0] ==  (10 + 1)*10/2)
 
 
 function f (a, b) a = coroutine.yield(a);  error{a + b} end
-function g(x) return x[1]*2 end
+function g(x) return x[0]*2 end
 
 co = coroutine.wrap(function ()
        coroutine.yield(xpcall(f, g, 10, 20))
@@ -520,10 +520,10 @@ if not _soft then
   local lim = 1000000    -- (C stack limit; assume 32-bit machine)
   local t = {lim - 10, lim - 5, lim - 1, lim, lim + 1}
   for i = 1, #t do
-    local j = t[i]
+    local j = t[i-1]
     co = coroutine.create(function()
            local t = {}
-           for i = 1, j do t[i] = i end
+           for i = 0, j-1 do t[i] = i end
            return table.unpack(t)
          end)
     local r, msg = coroutine.resume(co)
@@ -581,7 +581,7 @@ local b = new(12)
 local c = new"hello"
 
 local function run (f, t)
-  local i = 1
+  local i = 0
   local c = coroutine.wrap(f)
   while true do
     local res, stat = c()

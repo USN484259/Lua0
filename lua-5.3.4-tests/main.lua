@@ -45,7 +45,7 @@ end
 local function checkprogout (s)
   local t = getoutput()
   for line in string.gmatch(s, ".-\n") do
-    assert(string.find(t, line, 1, true))
+    assert(string.find(t, line, 0, true))
   end
 end
 
@@ -68,7 +68,7 @@ local function NoRun (msg, p, ...)
   local s = string.format(p, ...)
   s = string.format("%s 2> %s", s, out)  -- will send error to 'out'
   assert(not os.execute(s))
-  assert(string.find(getoutput(), msg, 1, true))  -- check error message
+  assert(string.find(getoutput(), msg, 0, true))  -- check error message
 end
 
 RUN('lua -v')
@@ -159,7 +159,7 @@ local function convert (p)
   prepfile("print(package.path)")
   RUN('env LUA_PATH="%s" lua %s > %s', p, prog, out)
   local expected = getoutput()
-  expected = string.sub(expected, 1, -2)   -- cut final end of line
+  expected = string.sub(expected, 0, -1)   -- cut final end of line
   assert(string.gsub(p, ";;", ";"..defaultpath..";") == expected)
 end
 
@@ -179,14 +179,14 @@ checkout("1\n2\n15\n2\n15\n")
 
 -- test 'arg' table
 local a = [[
-  assert(#arg == 3 and arg[1] == 'a' and
+  assert(#arg == 4 and arg[1] == 'a' and
          arg[2] == 'b' and arg[3] == 'c')
   assert(arg[-1] == '--' and arg[-2] == "-e " and arg[-3] == '%s')
   assert(arg[4] == nil and arg[-4] == nil)
-  local a, b, c = ...
-  assert(... == 'a' and a == 'a' and b == 'b' and c == 'c')
+  local prog, a, b, c = ...
+  assert(... == '%s' and prog == '%s' and a == 'a' and b == 'b' and c == 'c')
 ]]
-a = string.format(a, progname)
+a = string.format(a, progname, prog, prog)
 prepfile(a)
 RUN('lua "-e " -- %s a b c', prog)   -- "-e " runs an empty command
 
@@ -197,7 +197,7 @@ RUN('env LUA_PATH="?;;" lua -l%s - < %s', prog, otherprog)
 
 -- test messing up the 'arg' table
 RUN('echo "print(...)" | lua -e "arg[1] = 100" - > %s', out)
-checkout("100\n")
+checkout("-\t100\n")
 NoRun("'arg' is not a table", 'echo "" | lua -e "arg = 1" -')
 
 -- test error in 'print'
@@ -209,7 +209,7 @@ RUN('echo "io.stderr:write(1000)\ncont" | lua -e "require\'debug\'.debug()" 2> %
 checkout("lua_debug> 1000lua_debug> ")
 
 -- test many arguments
-prepfile[[print(({...})[30])]]
+prepfile[[print(({...})[29])]]
 RUN('lua %s %s > %s', prog, string.rep(" a", 30), out)
 checkout("a\n")
 

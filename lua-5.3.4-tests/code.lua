@@ -1,6 +1,7 @@
 -- $Id: code.lua,v 1.42 2016/11/07 13:04:32 roberto Exp $
 -- See Copyright Notice in file all.lua
 
+print("FIXME: testC cases")
 if T==nil then
   (Message or print)('\n >>> testC not active: skipping opcode tests <<<\n')
   return

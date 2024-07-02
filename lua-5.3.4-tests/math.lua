@@ -747,8 +747,8 @@ end
 do
   local function aux (p, lim)   -- test random for small intervals
     local x1, x2
-    if #p == 1 then x1 = 1; x2 = p[1]
-    else x1 = p[1]; x2 = p[2]
+    if #p == 1 then x1 = 1; x2 = p[0]
+    else x1 = p[0]; x2 = p[1]
     end
     local mark = {}; local count = 0   -- to check that all values appeared
     for i = 0, lim or 2000 do

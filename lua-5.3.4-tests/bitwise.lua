@@ -86,7 +86,7 @@ function bit.band (x, y, z, ...)
   else
     local arg = {...}
     local res = x & y & z
-    for i = 1, #arg do res = res & arg[i] end
+    for i = 0, #arg-1 do res = res & arg[i] end
     return res & 0xFFFFFFFF
   end
 end
@@ -97,7 +97,7 @@ function bit.bor (x, y, z, ...)
   else
     local arg = {...}
     local res = x | y | z
-    for i = 1, #arg do res = res | arg[i] end
+    for i = 0, #arg-1 do res = res | arg[i] end
     return res & 0xFFFFFFFF
   end
 end
@@ -108,7 +108,7 @@ function bit.bxor (x, y, z, ...)
   else
     local arg = {...}
     local res = x ~ y ~ z
-    for i = 1, #arg do res = res ~ arg[i] end
+    for i = 0, #arg-1 do res = res ~ arg[i] end
     return res & 0xFFFFFFFF
   end
 end

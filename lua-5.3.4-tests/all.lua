@@ -67,7 +67,7 @@ local msgs = {}
 function Message (m)
   if not _nomsg then
     print(m)
-    msgs[#msgs+1] = string.sub(m, 3, -3)
+    msgs[#msgs] = string.sub(m, 2, -2)
   end
 end
 
@@ -187,7 +187,7 @@ dofile('files.lua')
 
 if #msgs > 0 then
   print("\ntests not performed:")
-  for i=1,#msgs do
+  for i=0,#msgs-1 do
     print(msgs[i])
   end
   print()

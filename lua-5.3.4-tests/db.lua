@@ -20,7 +20,7 @@ function test (s, l, p)     -- this must be line 19
   collectgarbage()   -- avoid gc during trace
   local function f (event, line)
     assert(event == 'line')
-    local l = table.remove(l, 1)
+    local l = table.remove(l, 0)
     if p then print(l, line) end
     assert(l == line, "wrong trace!!")
   end
@@ -152,7 +152,7 @@ test([[while math.sin(1) do
 end
 a=1]], {1,2,3,6})
 
-test([[for i=1,3 do
+test([[for i=0,2 do
   a=i
 end
 ]], {1,2,1,2,1,2,1,3})
@@ -162,7 +162,7 @@ test([[for i,v in pairs{'a','b'} do
 end
 ]], {1,2,1,2,1,3})
 
-test([[for i=1,4 do a=1 end]], {1,1,1,1,1})
+test([[for i=0,3 do a=1 end]], {1,1,1,1,1})
 
 
 
@@ -190,8 +190,8 @@ assert(not debug.getlocal(print, 1))
 -- varargs
 local function foo (a, ...)
   local t = table.pack(...)
-  for i = 1, t.n do
-    local n, v = debug.getlocal(1, -i)
+  for i = 0, t.n-1 do
+    local n, v = debug.getlocal(1, -i-1)
     assert(n == "(*vararg)" and v == t[i])
   end
   assert(not debug.getlocal(1, -(t.n + 1)))
@@ -209,7 +209,7 @@ foo()
 foo(print)
 foo(200, 3, 4)
 local a = {}
-for i = 1, (_soft and 100 or 1000) do a[i] = i end
+for i = 0, (_soft and 100 or 1000) do a[i] = i end
 foo(table.unpack(a))
 a = nil
 
@@ -316,7 +316,7 @@ assert(not debug.getlocal(0, 3))
 assert(not debug.getlocal(0, 0))
 
 function f()
-  assert(select(2, debug.getlocal(2,3)) == 1)
+  assert(select(1, debug.getlocal(2,3)) == 1)
   assert(not debug.getlocal(2,4))
   debug.setlocal(2, 3, 10)
   return 20
@@ -420,7 +420,7 @@ assert(t.a == nil and t.b == 2 and t.c == 3)
 t = getupvalues(foo2)
 assert(t.a == 1 and t.b == 2 and t.c == 3)
 assert(debug.setupvalue(foo1, 1, "xuxu") == "b")
-assert(({debug.getupvalue(foo2, 3)})[2] == "xuxu")
+assert(({debug.getupvalue(foo2, 3)})[1] == "xuxu")
 -- upvalues of C functions are allways "called" "" (the empty string)
 assert(debug.getupvalue(string.gmatch("x", "x"), 1) == "")  
 
@@ -439,7 +439,7 @@ a=0; for i=1,1000 do end; assert(a == 0)
 do
   debug.sethook(print, "", 2^24 - 1)   -- count upperbound
   local f,m,c = debug.gethook()
-  assert(({debug.gethook()})[3] == 2^24 - 1)
+  assert(({debug.gethook()})[2] == 2^24 - 1)
 end
 
 debug.sethook()
@@ -474,7 +474,7 @@ local res = {"return",   -- first return (from sethook)
   "return", "return",
   "call",    -- last call (to sethook)
 }
-for i = 1, #res do assert(res[i] == table.remove(b, 1)) end
+for i = 0, #res-1 do assert(res[i] == table.remove(b, 0)) end
 
 b = 0
 debug.sethook(function (e)
@@ -563,10 +563,10 @@ local function checktraceback (co, p, level)
   local tb = debug.traceback(co, nil, level)
   local i = 0
   for l in string.gmatch(tb, "[^\n]+\n?") do
-    assert(i == 0 or string.find(l, p[i]))
+    assert(i == 0 or string.find(l, p[i - 1]))
     i = i+1
   end
-  assert(p[i] == nil)
+  assert(p[i - 1] == nil)
 end
 
 
@@ -612,7 +612,7 @@ assert(a == "a" and b == 1)
 debug.setlocal(co, 1, 2, "hi")
 assert(debug.gethook(co) == foo)
 assert(#tr == 2 and
-       tr[1] == l.currentline-1 and tr[2] == l.currentline)
+       tr[0] == l.currentline-1 and tr[1] == l.currentline)
 
 a,b,c = pcall(coroutine.resume, co)
 assert(a and b and c == l.currentline+1)
@@ -620,7 +620,7 @@ checktraceback(co, {"yield", "in function <"})
 
 a,b = coroutine.resume(co)
 assert(a and b == "hi")
-assert(#tr == 4 and tr[4] == l.currentline+2)
+assert(#tr == 4 and tr[3] == l.currentline+2)
 assert(debug.gethook(co) == foo)
 assert(not debug.gethook())
 checktraceback(co, {})
@@ -653,9 +653,9 @@ t = {"'coroutine.yield'", "'f'", "in function <"}
 while coroutine.status(co) == "suspended" do
   checktraceback(co, t)
   a, b = coroutine.resume(co)
-  table.insert(t, 2, "'f'")   -- one more recursive call to 'f'
+  table.insert(t, 1, "'f'")   -- one more recursive call to 'f'
 end
-t[1] = "'error'"
+t[0] = "'error'"
 checktraceback(co, t)
 
 
@@ -740,7 +740,7 @@ do
   print("testing traceback sizes")
 
   local function countlines (s)
-    return select(2, string.gsub(s, "\n", ""))
+    return select(1, string.gsub(s, "\n", ""))
   end
 
   local function deep (lvl, n)

@@ -99,15 +99,15 @@ else end
 local function foo ()
   local a = {}
   goto l3
-  ::l1:: a[#a + 1] = 1; goto l2;
-  ::l2:: a[#a + 1] = 2; goto l5;
+  ::l1:: a[#a] = 1; goto l2;
+  ::l2:: a[#a] = 2; goto l5;
   ::l3::
-  ::l3a:: a[#a + 1] = 3; goto l1;
-  ::l4:: a[#a + 1] = 4; goto l6;
-  ::l5:: a[#a + 1] = 5; goto l4;
-  ::l6:: assert(a[1] == 3 and a[2] == 1 and a[3] == 2 and
-              a[4] == 5 and a[5] == 4)
-  if not a[6] then a[6] = true; goto l3a end   -- do it twice
+  ::l3a:: a[#a] = 3; goto l1;
+  ::l4:: a[#a] = 4; goto l6;
+  ::l5:: a[#a] = 5; goto l4;
+  ::l6:: assert(a[0] == 3 and a[1] == 1 and a[2] == 2 and
+              a[3] == 5 and a[4] == 4)
+  if not a[5] then a[5] = true; goto l3a end   -- do it twice
 end
 
 ::l6:: foo()
@@ -138,16 +138,16 @@ local function foo ()
   do
   local i = 1
   local a, b, c, d
-  t[1] = function () return a, b, c, d end
+  t[0] = function () return a, b, c, d end
   ::l1::
   local b
   do
     local c
-    t[#t + 1] = function () return a, b, c, d end    -- t[2], t[4], t[6]
+    t[#t] = function () return a, b, c, d end    -- t[2], t[4], t[6]
     if i > 2 then goto l2 end
     do
       local d
-      t[#t + 1] = function () return a, b, c, d end   -- t[3], t[5]
+      t[#t] = function () return a, b, c, d end   -- t[3], t[5]
       i = i + 1
       local a
       goto l1
@@ -161,18 +161,18 @@ local a = foo()
 assert(#a == 6)
 
 -- all functions share same 'a'
-for i = 2, 6 do
-  assert(debug.upvalueid(a[1], 1) == debug.upvalueid(a[i], 1))
+for i = 1, 6-1 do
+  assert(debug.upvalueid(a[0], 1) == debug.upvalueid(a[i], 1))
 end
 
 -- 'b' and 'c' are shared among some of them
-for i = 2, 6 do
+for i = 1, 6-1 do
   -- only a[1] uses external 'b'/'b'
-  assert(debug.upvalueid(a[1], 2) ~= debug.upvalueid(a[i], 2))
-  assert(debug.upvalueid(a[1], 3) ~= debug.upvalueid(a[i], 3))
+  assert(debug.upvalueid(a[0], 2) ~= debug.upvalueid(a[i], 2))
+  assert(debug.upvalueid(a[0], 3) ~= debug.upvalueid(a[i], 3))
 end
 
-for i = 3, 5, 2 do
+for i = 2, 5, 2 do
   -- inner functions share 'b'/'c' with previous ones
   assert(debug.upvalueid(a[i], 2) == debug.upvalueid(a[i - 1], 2))
   assert(debug.upvalueid(a[i], 3) == debug.upvalueid(a[i - 1], 3))
@@ -182,13 +182,13 @@ for i = 3, 5, 2 do
 end
 
 -- only external 'd' is shared
-for i = 2, 6, 2 do
-  assert(debug.upvalueid(a[1], 4) == debug.upvalueid(a[i], 4))
+for i = 1, 6, 2 do
+  assert(debug.upvalueid(a[0], 4) == debug.upvalueid(a[i], 4))
 end
 
 -- internal 'd's are all different
-for i = 3, 5, 2 do
-  for j = 1, 6 do
+for i = 2, 5, 2 do
+  for j = 0, 6-1 do
     assert((debug.upvalueid(a[i], 4) == debug.upvalueid(a[j], 4))
       == (i == j))
   end

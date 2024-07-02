@@ -23,8 +23,8 @@ do
   -- each with 1-10 repetitions of '?'
   local max = _soft and 100 or 2000
   local t = {}
-  for i = 1,max do t[i] = string.rep("?", i%10 + 1) end
-  t[#t + 1] = ";"    -- empty template
+  for i = 0,max-1 do t[i] = string.rep("?", i%10 + 1) end
+  t[#t] = ";"    -- empty template
   local path = table.concat(t, ";")
   -- use that path in a search
   local s, err = package.searchpath("xuxu", path)
@@ -131,7 +131,7 @@ local try = function (p, n, r)
 end
 
 a = require"names"
-assert(a[1] == "names" and a[2] == D"names.lua")
+assert(a[0] == "names" and a[1] == D"names.lua")
 
 _G.a = nil
 local st, msg = pcall(require, "err")
@@ -211,7 +211,7 @@ local fname = "file_does_not_exist2"
 local m, err = pcall(require, fname)
 for t in string.gmatch(package.path..";"..package.cpath, "[^;]+") do
   t = string.gsub(t, "?", fname)
-  assert(string.find(err, t, 1, true))
+  assert(string.find(err, t, 0, true))
 end
 
 do  -- testing 'package.searchers' not being a table
@@ -225,7 +225,7 @@ end
 local function import(...)
   local f = {...}
   return function (m)
-    for i=1, #f do m[f[i]] = _G[f[i]] end
+    for i=0, #f-1 do m[f[i]] = _G[f[i]] end
   end
 end
 
@@ -296,7 +296,7 @@ do
   local pl = require"pl"
   assert(require"pl" == pl)
   assert(pl.xuxu(10) == 30)
-  assert(pl[1] == "pl" and pl[2] == nil)
+  assert(pl[0] == "pl" and pl[1] == nil)
 
   package = p
   assert(type(package.path) == "string")
@@ -320,7 +320,7 @@ a[f()], b, a[f()+3] = f(), a, 'x'
 assert(a[10] == 10 and b == a and a[13] == 'x')
 
 do
-  local f = function (n) local x = {}; for i=1,n do x[i]=i end;
+  local f = function (n) local x = {}; for i=0,n-1 do x[i]=i+1 end;
                          return table.unpack(x) end;
   local a,b,c
   a,b = 0, f(1)
@@ -393,8 +393,8 @@ a = nil
 
 a = {10,9,8,7,6,5,4,3,2; [-3]='a', [f]=print, a='a', b='ab'}
 a, a.x, a.y = a, a[-3]
-assert(a[1]==10 and a[-3]==a.a and a[f]==print and a.x=='a' and not a.y)
-a[1], f(a)[2], b, c = {['alo']=assert}, 10, a[1], a[f], 6, 10, 23, f(a), 2
+assert(a[0]==10 and a[-3]==a.a and a[f]==print and a.x=='a' and not a.y)
+a[1], f(a)[2], b, c = {['alo']=assert}, 10, a[0], a[f], 6, 10, 23, f(a), 2
 a[1].alo(a[2]==10 and b==10 and c==print)
 
 

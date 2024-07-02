@@ -37,7 +37,7 @@ local function checksyntax (prog, extra, token, line)
   local pt = string.format([[^%%[string ".*"%%]:%d: .- near %s$]],
                            line, token)
   assert(string.find(msg, pt))
-  assert(string.find(msg, msg, 1, true))
+  assert(string.find(msg, msg, 0, true))
 end
 
 
@@ -49,7 +49,7 @@ assert(doit("error()") == nil)
 
 
 -- test common errors/errors that crashed in the past
-assert(doit("table.unpack({}, 1, n=2^30)"))
+assert(doit("table.unpack({}, 0, n=2^30)"))
 assert(doit("a=math.sin()"))
 assert(not doit("tostring(1)") and doit("tostring()"))
 assert(doit"tonumber()")
@@ -77,8 +77,8 @@ checkmessage("a = {} <= 1", "attempt to compare")
 checkmessage("a=1; bbbb=2; a=math.sin(3)+bbbb(3)", "global 'bbbb'")
 checkmessage("a={}; do local a=1 end a:bbbb(3)", "method 'bbbb'")
 checkmessage("local a={}; a.bbbb(3)", "field 'bbbb'")
-assert(not string.find(doit"a={13}; local bbbb=1; a[bbbb](3)", "'bbbb'"))
-checkmessage("a={13}; local bbbb=1; a[bbbb](3)", "number")
+assert(not string.find(doit"a={13}; local bbbb=0; a[bbbb](3)", "'bbbb'"))
+checkmessage("a={13}; local bbbb=0; a[bbbb](3)", "number")
 checkmessage("a=(1)..{}", "a table value")
 
 checkmessage("a = #print", "length of a function value")
@@ -181,7 +181,7 @@ end
 -- tests for field accesses after RK limit
 local t = {}
 for i = 1, 1000 do
-  t[i] = "a = x" .. i
+  t[i-1] = "a = x" .. i
 end
 local s = table.concat(t, "; ")
 t = nil
@@ -398,7 +398,7 @@ if not _soft then
   assert(msg == 15)
 
   local f = function ()
-    for i = 999900, 1000000, 1 do table.unpack({}, 1, i) end
+    for i = 999900, 1000000, 1 do table.unpack({}, 0, i) end
   end
   checkerr("too many results", f)
 
@@ -441,7 +441,7 @@ end
 
 -- xpcall with arguments
 a, b, c = xpcall(string.find, error, "alo", "al")
-assert(a and b == 1 and c == 2)
+assert(a and b == 0 and c == 2)
 a, b, c = xpcall(string.find, function (x) return {} end, true, "al")
 assert(not a and type(b) == "table" and c == nil)
 

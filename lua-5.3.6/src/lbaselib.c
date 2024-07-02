@@ -206,14 +206,12 @@ static int luaB_type (lua_State *L) {
 }
 
 
-static int pairsmeta (lua_State *L, const char *method, int iszero,
-                      lua_CFunction iter) {
+static int pairsmeta (lua_State *L, const char *method, lua_CFunction iter) {
   luaL_checkany(L, 1);
   if (luaL_getmetafield(L, 1, method) == LUA_TNIL) {  /* no metamethod? */
     lua_pushcfunction(L, iter);  /* will return generator, */
     lua_pushvalue(L, 1);  /* state, */
-    if (iszero) lua_pushinteger(L, 0);  /* and initial value */
-    else lua_pushnil(L);
+    lua_pushnil(L);  /* and initial value */
   }
   else {
     lua_pushvalue(L, 1);  /* argument 'self' to metamethod */
@@ -236,7 +234,7 @@ static int luaB_next (lua_State *L) {
 
 
 static int luaB_pairs (lua_State *L) {
-  return pairsmeta(L, "__pairs", 0, luaB_next);
+  return pairsmeta(L, "__pairs", luaB_next);
 }
 
 
@@ -244,7 +242,7 @@ static int luaB_pairs (lua_State *L) {
 ** Traversal function for 'ipairs'
 */
 static int ipairsaux (lua_State *L) {
-  lua_Integer i = luaL_checkinteger(L, 2) + 1;
+  lua_Integer i = (lua_type(L, 2) == LUA_TNIL) ? 0 : luaL_checkinteger(L, 2) + 1;
   lua_pushinteger(L, i);
   return (lua_geti(L, 1, i) == LUA_TNIL) ? 1 : 2;
 }
@@ -256,12 +254,12 @@ static int ipairsaux (lua_State *L) {
 */
 static int luaB_ipairs (lua_State *L) {
 #if defined(LUA_COMPAT_IPAIRS)
-  return pairsmeta(L, "__ipairs", 1, ipairsaux);
+  return pairsmeta(L, "__ipairs", ipairsaux);
 #else
   luaL_checkany(L, 1);
   lua_pushcfunction(L, ipairsaux);  /* iteration function */
   lua_pushvalue(L, 1);  /* state */
-  lua_pushinteger(L, 0);  /* initial value */
+  lua_pushnil(L);  /* initial value */
   return 3;
 #endif
 }
@@ -391,8 +389,8 @@ static int luaB_select (lua_State *L) {
   else {
     lua_Integer i = luaL_checkinteger(L, 1);
     if (i < 0) i = n + i;
-    else if (i > n) i = n;
-    luaL_argcheck(L, 1 <= i, 1, "index out of range");
+    else i++;
+    luaL_argcheck(L, 0 < i && i <= n, 1, "index out of range");
     return n - (int)i;
   }
 }

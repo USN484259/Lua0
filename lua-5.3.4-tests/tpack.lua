@@ -95,7 +95,7 @@ for i = 1, sizeLI do
   local lstr = "\1\2\3\4\5\6\7\8\9\10\11\12\13"
   local lnum = 0x13121110090807060504030201
   local n = lnum & (~(-1 << (i * 8)))
-  local s = string.sub(lstr, 1, i)
+  local s = string.sub(lstr, 0, i)
   assert(pack("<i" .. i, n) == s)
   assert(pack(">i" .. i, n) == s:reverse())
   assert(unpack(">i" .. i, s:reverse()) == n)
@@ -212,7 +212,7 @@ end
 
 do
   local x = pack("s", "alo")
-  checkerror("too short", unpack, "s", x:sub(1, -2))
+  checkerror("too short", unpack, "s", x:sub(0, -1))
   checkerror("too short", unpack, "c5", "abcd")
   checkerror("out of limits", pack, "s100", "alo")
 end
@@ -230,7 +230,7 @@ do
   assert(pack("c88", "") == string.rep("\0", 88))
   assert(pack("c188", "ab") == "ab" .. string.rep("\0", 188 - 2))
   local a, b, c = unpack("!4 z c3", "abcdefghi\0xyz")
-  assert(a == "abcdefghi" and b == "xyz" and c == 14)
+  assert(a == "abcdefghi" and b == "xyz" and c == 13)
   checkerror("longer than", pack, "c3", "1234")
 end
 
@@ -254,32 +254,32 @@ do
               "\0\0\0\0\0\0\0\xC8" .. 
               "\xEC" .. "\0\0\0\0\0\0\0")
   local a, b, c, d, pos = unpack(">!8 c1 Xh i4 i8 b Xi8 XI XH", x)
-  assert(a == "\xF4" and b == 100 and c == 200 and d == -20 and (pos - 1) == #x)
+  assert(a == "\xF4" and b == 100 and c == 200 and d == -20 and pos == #x)
 
   x = pack(">!4 c3 c4 c2 z i4 c5 c2 Xi4",
                   "abc", "abcd", "xz", "hello", 5, "world", "xy")
   assert(x == "abcabcdxzhello\0\0\0\0\0\5worldxy\0")
   local a, b, c, d, e, f, g, pos = unpack(">!4 c3 c4 c2 z i4 c5 c2 Xh Xi4", x)
   assert(a == "abc" and b == "abcd" and c == "xz" and d == "hello" and
-         e == 5 and f == "world" and g == "xy" and (pos - 1) % 4 == 0)
+         e == 5 and f == "world" and g == "xy" and pos % 4 == 0)
 
   x = pack(" b b Xd b Xb x", 1, 2, 3)
   assert(packsize(" b b Xd b Xb x") == 4)
   assert(x == "\1\2\3\0")
   a, b, c, pos = unpack("bbXdb", x)
-  assert(a == 1 and b == 2 and c == 3 and pos == #x)
+  assert(a == 1 and b == 2 and c == 3 and pos == #x - 1)
 
   -- only alignment
   assert(packsize("!8 xXi8") == 8)
-  local pos = unpack("!8 xXi8", "0123456701234567"); assert(pos == 9)
+  local pos = unpack("!8 xXi8", "0123456701234567"); assert(pos == 8)
   assert(packsize("!8 xXi2") == 2)
-  local pos = unpack("!8 xXi2", "0123456701234567"); assert(pos == 3)
+  local pos = unpack("!8 xXi2", "0123456701234567"); assert(pos == 2)
   assert(packsize("!2 xXi2") == 2)
-  local pos = unpack("!2 xXi2", "0123456701234567"); assert(pos == 3)
+  local pos = unpack("!2 xXi2", "0123456701234567"); assert(pos == 2)
   assert(packsize("!2 xXi8") == 2)
-  local pos = unpack("!2 xXi8", "0123456701234567"); assert(pos == 3)
+  local pos = unpack("!2 xXi8", "0123456701234567"); assert(pos == 2)
   assert(packsize("!16 xXi16") == 16)
-  local pos = unpack("!16 xXi16", "0123456701234567"); assert(pos == 17)
+  local pos = unpack("!16 xXi16", "0123456701234567"); assert(pos == 16)
 
   checkerror("invalid next option", pack, "X")
   checkerror("invalid next option", unpack, "XXi", "")
@@ -289,31 +289,31 @@ end
 
 do    -- testing initial position
   local x = pack("i4i4i4i4", 1, 2, 3, 4)
-  for pos = 1, 16, 4 do
+  for pos = 0, 16-1, 4 do
     local i, p = unpack("i4", x, pos)
     assert(i == pos//4 + 1 and p == pos + 4)
   end
 
   -- with alignment
   for pos = 0, 12 do    -- will always round position to power of 2
-    local i, p = unpack("!4 i4", x, pos + 1)
-    assert(i == (pos + 3)//4 + 1 and p == i*4 + 1)
+    local i, p = unpack("!4 i4", x, pos)
+    assert(i == (pos + 3)//4 + 1 and p == i*4)
   end
 
   -- negative indices
   local i, p = unpack("!4 i4", x, -4)
-  assert(i == 4 and p == 17)
+  assert(i == 4 and p == 16)
   local i, p = unpack("!4 i4", x, -7)
-  assert(i == 4 and p == 17)
+  assert(i == 4 and p == 16)
   local i, p = unpack("!4 i4", x, -#x)
-  assert(i == 1 and p == 5)
+  assert(i == 1 and p == 4)
 
   -- limits
-  for i = 1, #x + 1 do
+  for i = 0, #x do
     assert(unpack("c0", x, i) == "")
   end
-  checkerror("out of string", unpack, "c0", x, 0)
-  checkerror("out of string", unpack, "c0", x, #x + 2)
+  --checkerror("out of string", unpack, "c0", x, 0)
+  checkerror("out of string", unpack, "c0", x, #x + 1)
   checkerror("out of string", unpack, "c0", x, -(#x + 1))
  
 end

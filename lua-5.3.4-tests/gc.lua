@@ -18,9 +18,9 @@ do
   local a = collectgarbage("setpause", 200)
   local b = collectgarbage("setstepmul", 200)
   local t = {0, 2, 10, 90, 500, 5000, 30000, 0x7ffffffe}
-  for i = 1, #t do
+  for i = 0, #t-1 do
     local p = t[i]
-    for j = 1, #t do
+    for j = 0, #t-1 do
       local m = t[j]
       collectgarbage("setpause", p)
       collectgarbage("setstepmul", m)
@@ -47,17 +47,17 @@ local function GC1 ()
   u = setmetatable({}, {__gc = function () finish = true end})
   b = {34}
   repeat u = {} until finish
-  assert(b[1] == 34)   -- 'u' was collected, but 'b' was not
+  assert(b[0] == 34)   -- 'u' was collected, but 'b' was not
 
   finish = false; local i = 1
   u = setmetatable({}, {__gc = function () finish = true end})
   repeat i = i + 1; u = tostring(i) .. tostring(i) until finish
-  assert(b[1] == 34)   -- 'u' was collected, but 'b' was not
+  assert(b[0] == 34)   -- 'u' was collected, but 'b' was not
 
   finish = false
   u = setmetatable({}, {__gc = function () finish = true end})
   repeat local i; u = function () return i end until finish
-  assert(b[1] == 34)   -- 'u' was collected, but 'b' was not
+  assert(b[0] == 34)   -- 'u' was collected, but 'b' was not
 end
 
 local function GC2 ()
@@ -66,17 +66,17 @@ local function GC2 ()
   u = {setmetatable({}, {__gc = function () finish = true end})}
   b = {34}
   repeat u = {{}} until finish
-  assert(b[1] == 34)   -- 'u' was collected, but 'b' was not
+  assert(b[0] == 34)   -- 'u' was collected, but 'b' was not
 
   finish = false; local i = 1
   u = {setmetatable({}, {__gc = function () finish = true end})}
   repeat i = i + 1; u = {tostring(i) .. tostring(i)} until finish
-  assert(b[1] == 34)   -- 'u' was collected, but 'b' was not
+  assert(b[0] == 34)   -- 'u' was collected, but 'b' was not
 
   finish = false
   u = {setmetatable({}, {__gc = function () finish = true end})}
   repeat local i; u = {function () return i end} until finish
-  assert(b[1] == 34)   -- 'u' was collected, but 'b' was not
+  assert(b[0] == 34)   -- 'u' was collected, but 'b' was not
 end
 
 local function GC()  GC1(); GC2() end
@@ -135,8 +135,8 @@ end
 do
   local step = 1
   if _soft then step = 13 end
-  for i=1, string.len(prog), step do
-    for j=i, string.len(prog), step do
+  for i=0, string.len(prog)-1, step do
+    for j=i+1, string.len(prog), step do
       pcall(load(string.sub(prog, i, j), ""))
     end
   end
@@ -151,7 +151,7 @@ n = 0
 k = math.min(300, (math.maxinteger // 80) // 2)
 while n < k do s = s..x; n=n+1; j=tostring(n)  end
 assert(string.len(s) == k*80)
-s = string.sub(s, 1, 10000)
+s = string.sub(s, 0, 10000)
 s, i = string.gsub(s, '(%d%d%d%d)', '')
 assert(i==10000 // 4)
 s = nil
@@ -218,7 +218,7 @@ print("clearing tables")
 lim = 15
 a = {}
 -- fill a with `collectable' indices
-for i=1,lim do a[{}] = i end
+for i=0,lim-1 do a[{}] = i end
 b = {}
 for k,v in pairs(a) do b[k]=v end
 -- remove all indices and collect them
@@ -230,33 +230,33 @@ end
 b = nil
 collectgarbage()
 for n in pairs(a) do error'cannot be here' end
-for i=1,lim do a[i] = i end
-for i=1,lim do assert(a[i] == i) end
+for i=0,lim-1 do a[i] = i end
+for i=0,lim-1 do assert(a[i] == i) end
 
 
 print('weak tables')
 a = {}; setmetatable(a, {__mode = 'k'});
 -- fill a with some `collectable' indices
-for i=1,lim do a[{}] = i end
+for i=0,lim-1 do a[{}] = i end
 -- and some non-collectable ones
-for i=1,lim do a[i] = i end
-for i=1,lim do local s=string.rep('@', i); a[s] = s..'#' end
+for i=0,lim-1 do a[i] = i end
+for i=0,lim-1 do local s=string.rep('@', i); a[s] = s..'#' end
 collectgarbage()
 local i = 0
 for k,v in pairs(a) do assert(k==v or k..'#'==v); i=i+1 end
 assert(i == 2*lim)
 
 a = {}; setmetatable(a, {__mode = 'v'});
-a[1] = string.rep('b', 21)
+a[0] = string.rep('b', 21)
 collectgarbage()
-assert(a[1])   -- strings are *values*
-a[1] = nil
+assert(a[0])   -- strings are *values*
+a[0] = nil
 -- fill a with some `collectable' values (in both parts of the table)
-for i=1,lim do a[i] = {} end
-for i=1,lim do a[i..'x'] = {} end
+for i=0,lim-1 do a[i] = {} end
+for i=0,lim-1 do a[i..'x'] = {} end
 -- and some non-collectable ones
-for i=1,lim do local t={}; a[t]=t end
-for i=1,lim do a[i+lim]=i..'x' end
+for i=0,lim-1 do local t={}; a[t]=t end
+for i=0,lim-1 do a[i+lim]=i..'x' end
 collectgarbage()
 local i = 0
 for k,v in pairs(a) do assert(k==v or k-lim..'x' == v); i=i+1 end
@@ -265,19 +265,19 @@ assert(i == 2*lim)
 a = {}; setmetatable(a, {__mode = 'vk'});
 local x, y, z = {}, {}, {}
 -- keep only some items
-a[1], a[2], a[3] = x, y, z
+a[0], a[1], a[2] = x, y, z
 a[string.rep('$', 11)] = string.rep('$', 11)
 -- fill a with some `collectable' values
-for i=4,lim do a[i] = {} end
-for i=1,lim do a[{}] = i end
-for i=1,lim do local t={}; a[t]=t end
+for i=3,lim-1 do a[i] = {} end
+for i=0,lim-1 do a[{}] = i end
+for i=0,lim-1 do local t={}; a[t]=t end
 collectgarbage()
 assert(next(a) ~= nil)
 local i = 0
 for k,v in pairs(a) do
-  assert((k == 1 and v == x) or
-         (k == 2 and v == y) or
-         (k == 3 and v == z) or k==v);
+  assert((k == 0 and v == x) or
+         (k == 1 and v == y) or
+         (k == 2 and v == z) or k==v);
   i = i+1
 end
 assert(i == 4)
@@ -314,26 +314,26 @@ for i = 1, 100 do local n = {}; a[n] = {k = {x}}; x = n end
 GC()
 local n = x
 local i = 0
-while n do n = a[n].k[1]; i = i + 1 end
+while n do n = a[n].k[0]; i = i + 1 end
 assert(i == 100)
 x = nil
 GC()
-for i = 1, 4 do assert(a[i][1] == i * 10); a[i] = nil end
+for i = 0, 3 do assert(a[i][0] == (i+1) * 10); a[i] = nil end
 assert(next(a) == nil)
 
 local K = {}
 a[K] = {}
-for i=1,10 do a[K][i] = {}; a[a[K][i]] = setmetatable({}, mt) end
+for i=0,10-1 do a[K][i] = {}; a[a[K][i]] = setmetatable({}, mt) end
 x = nil
-local k = 1
+local k = 0
 for j = 1,100 do
-  local n = {}; local nk = k%10 + 1
+  local n = {}; local nk = (k+1)%10
   a[a[K][nk]][n] = {x, k = k}; x = n; k = nk
 end
 GC()
 local n = x
 local i = 0
-while n do local t = a[a[K][k]][n]; n = t[1]; k = t.k; i = i + 1 end
+while n do local t = a[a[K][k]][n]; n = t[0]; k = t.k; i = i + 1 end
 assert(i == 100)
 K = nil
 GC()
@@ -352,21 +352,21 @@ setmetatable(u, {__gc = function (o)
   if i == 8 then error("here") end   -- error during GC
 end})
 
-for i = 6, 10 do
+for i = 5, 10-1 do
   local n = setmetatable({}, getmetatable(u))
   s[n] = i
 end
 
 assert(not pcall(collectgarbage))
-for i = 8, 10 do assert(s[i]) end
+for i = 8, 10-1 do assert(s[i]) end
 
-for i = 1, 5 do
+for i = 0, 5-1 do
   local n = setmetatable({}, getmetatable(u))
   s[n] = i
 end
 
 collectgarbage()
-for i = 1, 10 do assert(s[i]) end
+for i = 0, 10-1 do assert(s[i]) end
 
 getmetatable(u).__gc = false
 
@@ -395,11 +395,11 @@ else
   debug.setmetatable(u, {__gc = true})
   local s = 0
   local a = {[u] = 0}; setmetatable(a, {__mode = 'vk'})
-  for i=1,10 do a[newproxy(u)] = i end
+  for i=0,10-1 do a[newproxy(u)] = i end
   for k in pairs(a) do assert(getmetatable(k) == getmetatable(u)) end
   local a1 = {}; for k,v in pairs(a) do a1[k] = v end
   for k,v in pairs(a1) do a[v] = k end
-  for i =1,10 do assert(a[i]) end
+  for i =0,10-1 do assert(a[i]) end
   getmetatable(u).a = a1
   getmetatable(u).u = u
   do

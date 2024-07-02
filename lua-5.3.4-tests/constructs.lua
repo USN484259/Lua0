@@ -7,7 +7,7 @@ local debug = require "debug"
 
 
 local function checkload (s, msg)
-  assert(string.find(select(2, load(s)), msg))
+  assert(string.find(select(1, load(s)), msg))
 end
 
 -- testing semicollons
@@ -78,14 +78,14 @@ function f (i)
 end
 
 x = {f(3), f(5), f(10);};
-assert(x[1] == 3 and x[2] == 5 and x[3] == 10 and x[4] == 9 and x[12] == 1);
+assert(x[0] == 3 and x[1] == 5 and x[2] == 10 and x[3] == 9 and x[11] == 1);
 assert(x[nil] == nil)
 x = {f'alo', f'xixi', nil};
-assert(x[1] == 'alo' and x[2] == 'xixi' and x[3] == nil);
+assert(x[0] == 'alo' and x[1] == 'xixi' and x[2] == nil);
 x = {f'alo'..'xixi'};
-assert(x[1] == 'aloxixi')
+assert(x[0] == 'aloxixi')
 x = {f{}}
-assert(x[2] == 'jojo' and type(x[1]) == 'table')
+assert(x[1] == 'jojo' and type(x[0]) == 'table')
 
 
 local f = function (i)
@@ -103,10 +103,10 @@ i=3;
 t = {};
 a=nil
 while not a do
-  a=0; for i=1,n do for i=i,1,-1 do a=a+1; t[i]=1; end; end;
+  a=0; for i=0,n-1 do for i=i,0,-1 do a=a+1; t[i]=1; end; end;
 end
 assert(a == n*(n+1)/2 and i==3);
-assert(t[1] and t[n] and not t[0] and not t[n+1])
+assert(t[0] and t[n-1] and not t[-1] and not t[n])
 
 function f(b)
   local x = 1;
@@ -136,13 +136,13 @@ assert(f(3) == 'a' and f(12) == 'b' and f(26) == 'c' and f(100) == 8)
 
 local a, b = nil, 23
 x = {f(100)*2+3 or a, a or b+2}
-assert(x[1] == 19 and x[2] == 25)
+assert(x[0] == 19 and x[1] == 25)
 x = {f=2+3 or a, a = b+2}
 assert(x.f == 5 and x.a == 25)
 
 a={y=1}
 x = {a.y}
-assert(x[1] == 1)
+assert(x[0] == 1)
 
 function f(i)
   while 1 do
@@ -260,16 +260,16 @@ local cases = {}
 -- 'not(cases[i] op cases[n-i])' (syntax + value)
 local function createcases (n)
   local res = {}
-  for i = 1, n - 1 do
+  for i = 0, n - 1 do
     for _, v1 in ipairs(cases[i]) do
-      for _, v2 in ipairs(cases[n - i]) do
+      for _, v2 in ipairs(cases[n - 1 - i]) do
         for _, op in ipairs(binops) do
             local t = {
-              "(" .. v1[1] .. op[1] .. v2[1] .. ")",
-              op[2](v1[2], v2[2])
+              "(" .. v1[0] .. op[0] .. v2[0] .. ")",
+              op[1](v1[1], v2[1])
             }
-            res[#res + 1] = t
-            res[#res + 1] = {"not" .. t[1], not t[2]}
+            res[#res] = t
+            res[#res] = {"not" .. t[0], not t[1]}
         end
       end
     end
@@ -280,19 +280,19 @@ end
 -- do not do too many combinations for soft tests
 local level = _soft and 3 or 4
 
-cases[1] = basiccases
-for i = 2, level do cases[i] = createcases(i) end
+cases[0] = basiccases
+for i = 1, level-1 do cases[i] = createcases(i) end
 print("+")
 
 local prog = [[if %s then IX = true end; return %s]]
 
 local i = 0
-for n = 1, level do
+for n = 0, level-1 do
   for _, v in pairs(cases[n]) do
-    local s = v[1]
+    local s = v[0]
     local p = load(string.format(prog, s, s), "")
     IX = false
-    assert(p() == v[2] and IX == not not v[2])
+    assert(p() == v[1] and IX == not not v[1])
     i = i + 1
     if i % 60000 == 0 then print('+') end
   end

@@ -112,7 +112,7 @@ lexerror("'alo \\z", "<eof>")
 lexerror([['alo \98]], "<eof>")
 
 -- valid characters in variable names
-for i = 0, 255 do
+for i = 0, 256-1 do
   local s = string.char(i)
   assert(not string.find(s, "[a-zA-Z_]") == not load(s .. "=1", ""))
   assert(not string.find(s, "[a-zA-Z_0-9]") ==
@@ -151,7 +151,7 @@ print('+')
 a1 = [["this is a 'string' with several 'quotes'"]]
 a2 = "'quotes'"
 
-assert(string.find(a1, a2) == 34)
+assert(string.find(a1, a2) == 33)
 print('+')
 
 a1 = [==[temp = [[an arbitrary value]]; ]==]
@@ -187,7 +187,7 @@ a = [[00123456789012345678901234567890123456789123456789012345678901234567890123
 00123456789012345678901234567890123456789123456789012345678901234567890123456789
 ]]
 assert(string.len(a) == 1863)
-assert(string.sub(a, 1, 40) == string.sub(b, 1, 40))
+assert(string.sub(a, 0, 40) == string.sub(b, 0, 40))
 x = 1
 ]=]
 

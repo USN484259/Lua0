@@ -98,12 +98,12 @@ function f(x) b=x end
 a = f{$3$} or 10
 
 assert(a==10)
-assert(b[1] == "a10" and b[2] == 5 and b[#b-1] == "a50009")
+assert(b[0] == "a10" and b[1] == 5 and b[#b-2] == "a50009")
 
 
 function xxxx (x) return b[x] end
 
-assert(xxxx(3) == "a11")
+assert(xxxx(2) == "a11")
 
 a = nil; b=nil
 xxxx = nil
@@ -118,7 +118,7 @@ local function sig (x)
   return (x % 2 == 0) and '' or '-'
 end
 
-F = {
+F = { nil,
 function ()   -- $1$
   for i=10,50009 do
     io.write('a', i, ' = ', sig(i), 5+((i-10)/2), ',\n')

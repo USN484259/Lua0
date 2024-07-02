@@ -47,7 +47,7 @@ end
 t.__index = f
 
 a.parent = {z=25, x=12, [4] = 24}
-assert(a[1] == 10 and a.z == 28 and a[4] == 27 and a.x == "10")
+assert(a[0] == 10 and a.z == 28 and a[4] == 27 and a.x == "10")
 
 collectgarbage()
 
@@ -55,15 +55,15 @@ a = setmetatable({}, t)
 function f(t, i, v) rawset(t, i, v-3) end
 setmetatable(t, t)   -- causes a bug in 5.1 !
 t.__newindex = f
-a[1] = 30; a.x = "101"; a[5] = 200
-assert(a[1] == 27 and a.x == 98 and a[5] == 197)
+a[0] = 30; a.x = "101"; a[4] = 200
+assert(a[0] == 27 and a.x == 98 and a[4] == 197)
 
 do    -- bug in Lua 5.3.2
   local mt = {}
   mt.__newindex = mt
   local t = setmetatable({}, mt)
-  t[1] = 10     -- will segfault on some machines
-  assert(mt[1] == 10)
+  t[0] = 10     -- will segfault on some machines
+  assert(mt[0] == 10)
 end
 
 
@@ -106,9 +106,9 @@ t.__call = f
 
 do
   local x,y = a(table.unpack{'a', 1})
-  assert(x==a and y[1]=='a' and y[2]==1 and y[3]==nil)
+  assert(x==a and y[0]=='a' and y[1]==1 and y[2]==nil)
   x,y = a()
-  assert(x==a and y[1]==nil)
+  assert(x==a and y[0]==nil)
 end
 
 
@@ -116,7 +116,7 @@ local b = setmetatable({}, t)
 setmetatable(b,t)
 
 function f(op)
-  return function (...) cap = {[0] = op, ...} ; return (...) end
+  return function (...) cap = {op, ...} ; return (...) end
 end
 t.__add = f("add")
 t.__sub = f("sub")
@@ -383,7 +383,7 @@ local c = setmetatable({f=b}, tt)
 
 i = 0
 x = c(3,4,5)
-assert(i == 3 and x[1] == 3 and x[3] == 5)
+assert(i == 3 and x[0] == 3 and x[2] == 5)
 
 
 assert(_G.X == 20)

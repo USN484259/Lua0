@@ -82,10 +82,10 @@ function f(a,b,c) local d = 'a'; t={a,b,c,d} end
 
 f(      -- this line change must be valid
   1,2)
-assert(t[1] == 1 and t[2] == 2 and t[3] == nil and t[4] == 'a')
+assert(t[0] == 1 and t[1] == 2 and t[2] == nil and t[3] == 'a')
 f(1,2,   -- this one too
       3,4)
-assert(t[1] == 1 and t[2] == 2 and t[3] == 3 and t[4] == 'a')
+assert(t[0] == 1 and t[1] == 2 and t[2] == 3 and t[3] == 'a')
 
 function fat(x)
   if x <= 1 then return 1
@@ -177,15 +177,15 @@ print('+')
 -- testing multiple returns
 
 function unlpack (t, i)
-  i = i or 1
-  if (i <= #t) then
+  i = i or 0
+  if (i < #t) then
     return t[i], unlpack(t, i+1)
   end
 end
 
 function equaltab (t1, t2)
   assert(#t1 == #t2)
-  for i = 1, #t1 do
+  for i = 0, #t1-1 do
     assert(t1[i] == t2[i])
   end
 end
@@ -208,7 +208,7 @@ a,b,c,d = unlpack(pack(ret2(f()), (ret2(f()))))
 assert(a==1 and b==1 and c==nil and d==nil)
 
 a = ret2{ unlpack{1,2,3}, unlpack{3,2,1}, unlpack{"a", "b"}}
-assert(a[1] == 1 and a[2] == 3 and a[3] == "a" and a[4] == "b")
+assert(a[0] == 1 and a[1] == 3 and a[2] == "a" and a[3] == "b")
 
 
 -- testing calls with 'incorrect' arguments
@@ -226,8 +226,9 @@ function read1 (x)
   local i = 0
   return function ()
     collectgarbage()
+    local char = string.sub(x, i, i+1)
     i=i+1
-    return string.sub(x, i, i)
+    return char
   end
 end
 
@@ -250,7 +251,7 @@ assert(not load(function () return true end))
 
 -- small bug
 local t = {nil, "return ", "3"}
-f, msg = load(function () return table.remove(t, 1) end)
+f, msg = load(function () return table.remove(t, 0) end)
 assert(f() == nil)   -- should read the empty chunk
 
 -- another small bug (in 5.2.1)
@@ -325,13 +326,13 @@ assert(x() == 24)
 do
   local nup = 200    -- maximum number of local variables
   local prog = {"local a1"}
-  for i = 2, nup do prog[#prog + 1] = ", a" .. i end
-  prog[#prog + 1] = " = 1"
-  for i = 2, nup do prog[#prog + 1] = ", " .. i end
+  for i = 2, nup do prog[#prog] = ", a" .. i end
+  prog[#prog] = " = 1"
+  for i = 2, nup do prog[#prog] = ", " .. i end
   local sum = 1
-  prog[#prog + 1] = "; return function () return a1"
-  for i = 2, nup do prog[#prog + 1] = " + a" .. i; sum = sum + i end
-  prog[#prog + 1] = " end"
+  prog[#prog] = "; return function () return a1"
+  for i = 2, nup do prog[#prog] = " + a" .. i; sum = sum + i end
+  prog[#prog] = " end"
   prog = table.concat(prog)
   local f = assert(load(prog))()
   assert(f() == sum)
@@ -378,20 +379,20 @@ do
   )
   local c = string.dump(function () local a = 1; local b = 3; return a+b*3 end)
 
-  assert(string.sub(c, 1, #header) == header)
+  assert(string.sub(c, 0, #header) == header)
 
   -- corrupted header
-  for i = 1, #header do
-    local s = string.sub(c, 1, i - 1) ..
-              string.char(string.byte(string.sub(c, i, i)) + 1) ..
-              string.sub(c, i + 1, -1)
+  for i = 0, #header-1 do
+    local s = string.sub(c, 0, i) ..
+              string.char(string.byte(string.sub(c, i, i + 1)) + 1) ..
+              string.sub(c, i + 1)
     assert(#s == #c)
     assert(not load(s))
   end
 
   -- loading truncated binary chunks
   for i = 1, #c - 1 do
-    local st, msg = load(string.sub(c, 1, i))
+    local st, msg = load(string.sub(c, 0, i))
     assert(not st and string.find(msg, "truncated"))
   end
   assert(assert(load(c))() == 10)

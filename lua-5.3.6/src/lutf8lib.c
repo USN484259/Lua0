@@ -29,8 +29,8 @@
 /* translate a relative string position: negative means back from end */
 static lua_Integer u_posrelat (lua_Integer pos, size_t len) {
   if (pos >= 0) return pos;
-  else if (0u - (size_t)pos > len) return 0;
-  else return (lua_Integer)len + pos + 1;
+  else if (0u - (size_t)pos > len) return -1;
+  else return (lua_Integer)len + pos;
 }
 
 
@@ -72,9 +72,9 @@ static int utflen (lua_State *L) {
   int n = 0;
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
-  lua_Integer posi = u_posrelat(luaL_optinteger(L, 2, 1), len);
-  lua_Integer posj = u_posrelat(luaL_optinteger(L, 3, -1), len);
-  luaL_argcheck(L, 1 <= posi && --posi <= (lua_Integer)len, 2,
+  lua_Integer posi = u_posrelat(luaL_optinteger(L, 2, 0), len);
+  lua_Integer posj = u_posrelat(luaL_optinteger(L, 3, len), len);
+  luaL_argcheck(L, 0 <= posi && posi <= (lua_Integer)len, 2,
                    "initial position out of string");
   luaL_argcheck(L, --posj < (lua_Integer)len, 3,
                    "final position out of string");
@@ -82,7 +82,7 @@ static int utflen (lua_State *L) {
     const char *s1 = utf8_decode(s + posi, NULL);
     if (s1 == NULL) {  /* conversion error? */
       lua_pushnil(L);  /* return nil ... */
-      lua_pushinteger(L, posi + 1);  /* ... and current position */
+      lua_pushinteger(L, posi);  /* ... and current position */
       return 2;
     }
     posi = s1 - s;
@@ -100,11 +100,11 @@ static int utflen (lua_State *L) {
 static int codepoint (lua_State *L) {
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
-  lua_Integer posi = u_posrelat(luaL_optinteger(L, 2, 1), len);
-  lua_Integer pose = u_posrelat(luaL_optinteger(L, 3, posi), len);
+  lua_Integer posi = u_posrelat(luaL_optinteger(L, 2, 0), len);
+  lua_Integer pose = u_posrelat(luaL_optinteger(L, 3, posi + 1), len);
   int n;
   const char *se;
-  luaL_argcheck(L, posi >= 1, 2, "out of range");
+  luaL_argcheck(L, posi >= 0, 2, "out of range");
   luaL_argcheck(L, pose <= (lua_Integer)len, 3, "out of range");
   if (posi > pose) return 0;  /* empty interval; return no values */
   if (pose - posi >= INT_MAX)  /* (lua_Integer -> int) overflow? */
@@ -113,7 +113,7 @@ static int codepoint (lua_State *L) {
   luaL_checkstack(L, n, "string slice too long");
   n = 0;
   se = s + pose;
-  for (s += posi - 1; s < se;) {
+  for (s += posi; s < se;) {
     int code;
     s = utf8_decode(s, &code);
     if (s == NULL)
@@ -161,9 +161,9 @@ static int byteoffset (lua_State *L) {
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
   lua_Integer n  = luaL_checkinteger(L, 2);
-  lua_Integer posi = (n >= 0) ? 1 : len + 1;
+  lua_Integer posi = (n >= 0) ? 0 : len;
   posi = u_posrelat(luaL_optinteger(L, 3, posi), len);
-  luaL_argcheck(L, 1 <= posi && --posi <= (lua_Integer)len, 3,
+  luaL_argcheck(L, 0 <= posi && posi <= (lua_Integer)len, 3,
                    "position out of range");
   if (n == 0) {
     /* find beginning of current byte sequence */
@@ -191,7 +191,7 @@ static int byteoffset (lua_State *L) {
      }
   }
   if (n == 0)  /* did it find given character? */
-    lua_pushinteger(L, posi + 1);
+    lua_pushinteger(L, posi);
   else  /* no such character */
     lua_pushnil(L);
   return 1;
@@ -201,7 +201,7 @@ static int byteoffset (lua_State *L) {
 static int iter_aux (lua_State *L) {
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
-  lua_Integer n = lua_tointeger(L, 2) - 1;
+  lua_Integer n = lua_tointeger(L, 2);
   if (n < 0)  /* first iteration? */
     n = 0;  /* start from here */
   else if (n < (lua_Integer)len) {
@@ -215,7 +215,7 @@ static int iter_aux (lua_State *L) {
     const char *next = utf8_decode(s + n, &code);
     if (next == NULL || iscont(next))
       return luaL_error(L, "invalid UTF-8 code");
-    lua_pushinteger(L, n + 1);
+    lua_pushinteger(L, n);
     lua_pushinteger(L, code);
     return 2;
   }
@@ -226,7 +226,7 @@ static int iter_codes (lua_State *L) {
   luaL_checkstring(L, 1);
   lua_pushcfunction(L, iter_aux);
   lua_pushvalue(L, 1);
-  lua_pushinteger(L, 0);
+  lua_pushinteger(L, -1);
   return 3;
 }
 
