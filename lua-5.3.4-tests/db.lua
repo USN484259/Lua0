@@ -177,14 +177,14 @@ assert(not pcall(debug.setlocal, -1, 1, 10))
 local function foo (a,b,...) local d, e end
 local co = coroutine.create(foo)
 
-assert(debug.getlocal(foo, 1) == 'a')
-assert(debug.getlocal(foo, 2) == 'b')
-assert(not debug.getlocal(foo, 3))
-assert(debug.getlocal(co, foo, 1) == 'a')
-assert(debug.getlocal(co, foo, 2) == 'b')
-assert(not debug.getlocal(co, foo, 3))
+assert(debug.getlocal(foo, 0) == 'a')
+assert(debug.getlocal(foo, 1) == 'b')
+assert(not debug.getlocal(foo, 2))
+assert(debug.getlocal(co, foo, 0) == 'a')
+assert(debug.getlocal(co, foo, 1) == 'b')
+assert(not debug.getlocal(co, foo, 2))
 
-assert(not debug.getlocal(print, 1))
+assert(not debug.getlocal(print, 0))
 
 
 -- varargs
@@ -258,11 +258,11 @@ end, "crl")
 
 function f(a,b)
   collectgarbage()
-  local _, x = debug.getlocal(1, 1)
-  local _, y = debug.getlocal(1, 2)
+  local _, x = debug.getlocal(1, 0)
+  local _, y = debug.getlocal(1, 1)
   assert(x == a and y == b)
-  assert(debug.setlocal(2, 3, "pera") == "AA".."AA")
-  assert(debug.setlocal(2, 4, "maçã") == "B")
+  assert(debug.setlocal(2, 2, "pera") == "AA".."AA")
+  assert(debug.setlocal(2, 3, "maçã") == "B")
   x = debug.getinfo(2)
   assert(x.func == g and x.what == "Lua" and x.name == 'g' and
          x.nups == 2 and string.find(x.source, "^@.*db%.lua$"))
@@ -295,7 +295,7 @@ function g(...)
   assert(AAAA == "pera" and B == "maçã")
   do
      local B = 13
-     local x,y = debug.getlocal(1,5)
+     local x,y = debug.getlocal(1,4)
      assert(x == 'B' and y == 13)
   end
 end
@@ -308,17 +308,17 @@ assert(a[f] and a[g] and a[assert] and a[debug.getlocal] and not a[print])
 
 -- tests for manipulating non-registered locals (C and Lua temporaries)
 
-local n, v = debug.getlocal(0, 1)
+local n, v = debug.getlocal(0, 0)
 assert(v == 0 and n == "(*temporary)")
-local n, v = debug.getlocal(0, 2)
-assert(v == 2 and n == "(*temporary)")
-assert(not debug.getlocal(0, 3))
-assert(not debug.getlocal(0, 0))
+local n, v = debug.getlocal(0, 1)
+assert(v == 1 and n == "(*temporary)")
+assert(not debug.getlocal(0, 2))
+-- assert(not debug.getlocal(0, 0))
 
 function f()
-  assert(select(1, debug.getlocal(2,3)) == 1)
-  assert(not debug.getlocal(2,4))
-  debug.setlocal(2, 3, 10)
+  assert(select(1, debug.getlocal(2,2)) == 1)
+  assert(not debug.getlocal(2,3))
+  debug.setlocal(2, 2, 10)
   return 20
 end
 
@@ -335,7 +335,7 @@ assert(debug.gethook() == nil)
 
 local function collectlocals (level)
   local tab = {}
-  for i = 1, math.huge do
+  for i = 0, math.huge do
     local n, v = debug.getlocal(level + 1, i)
     if not (n and string.find(n, "^[a-zA-Z0-9_]+$")) then
        break   -- consider only real variables
@@ -398,7 +398,7 @@ end
 -- testing upvalue access
 local function getupvalues (f)
   local t = {}
-  local i = 1
+  local i = 0
   while true do
     local name, value = debug.getupvalue(f, i)
     if not name then break end
@@ -412,17 +412,17 @@ end
 local a,b,c = 1,2,3
 local function foo1 (a) b = a; return c end
 local function foo2 (x) a = x; return c+b end
-assert(not debug.getupvalue(foo1, 3))
-assert(not debug.getupvalue(foo1, 0))
-assert(not debug.setupvalue(foo1, 3, "xuxu"))
+assert(not debug.getupvalue(foo1, 2))
+assert(not debug.getupvalue(foo1, -1))
+assert(not debug.setupvalue(foo1, 2, "xuxu"))
 local t = getupvalues(foo1)
 assert(t.a == nil and t.b == 2 and t.c == 3)
 t = getupvalues(foo2)
 assert(t.a == 1 and t.b == 2 and t.c == 3)
-assert(debug.setupvalue(foo1, 1, "xuxu") == "b")
-assert(({debug.getupvalue(foo2, 3)})[1] == "xuxu")
+assert(debug.setupvalue(foo1, 0, "xuxu") == "b")
+assert(({debug.getupvalue(foo2, 2)})[1] == "xuxu")
 -- upvalues of C functions are allways "called" "" (the empty string)
-assert(debug.getupvalue(string.gmatch("x", "x"), 1) == "")  
+assert(debug.getupvalue(string.gmatch("x", "x"), 0) == "")
 
 
 -- testing count hooks
@@ -516,8 +516,8 @@ co = load[[
 local a = 0
 -- 'A' should be visible to debugger only after its complete definition
 debug.sethook(function (e, l)
-  if l == 3 then a = a + 1; assert(debug.getlocal(2, 1) == "(*temporary)")
-  elseif l == 4 then a = a + 1; assert(debug.getlocal(2, 1) == "A")
+  if l == 3 then a = a + 1; assert(debug.getlocal(2, 0) == "(*temporary)")
+  elseif l == 4 then a = a + 1; assert(debug.getlocal(2, 0) == "A")
   end
 end, "l")
 co()  -- run local function definition
@@ -552,7 +552,7 @@ assert(t.isvararg == true and t.nparams == 2 and t.nups == 1)
 
 t = debug.getinfo(1)   -- main
 assert(t.isvararg == true and t.nparams == 0 and t.nups == 1 and
-       debug.getupvalue(t.func, 1) == "_ENV")
+       debug.getupvalue(t.func, 0) == "_ENV")
 
 
 
@@ -605,11 +605,11 @@ for i=x.linedefined + 1, x.lastlinedefined do
 end
 assert(next(x.activelines) == nil)   -- no 'extra' elements
 assert(not debug.getinfo(co, 2))
-local a,b = debug.getlocal(co, 1, 1)
+local a,b = debug.getlocal(co, 1, 0)
 assert(a == "x" and b == 10)
-a,b = debug.getlocal(co, 1, 2)
+a,b = debug.getlocal(co, 1, 1)
 assert(a == "a" and b == 1)
-debug.setlocal(co, 1, 2, "hi")
+debug.setlocal(co, 1, 1, "hi")
 assert(debug.gethook(co) == foo)
 assert(#tr == 2 and
        tr[0] == l.currentline-1 and tr[1] == l.currentline)
@@ -634,11 +634,11 @@ co = coroutine.create(function (x)
 end)
 a, b = coroutine.resume(co, 10)
 assert(a and b == 10)
-a, b = debug.getlocal(co, 1, 1)
+a, b = debug.getlocal(co, 1, 0)
 assert(a == "x" and b == 10)
-assert(not debug.getlocal(co, 1, 5))
-assert(debug.setlocal(co, 1, 1, 30) == "x")
-assert(not debug.setlocal(co, 1, 5, 40))
+assert(not debug.getlocal(co, 1, 4))
+assert(debug.setlocal(co, 1, 0, 30) == "x")
+assert(not debug.setlocal(co, 1, 4, 40))
 a, b = coroutine.resume(co, 100)
 assert(a and b == 30)
 
@@ -782,16 +782,16 @@ prog = [[-- program to be loaded without debug information
 local debug = require'debug'
 local a = 12  -- a local variable
 
-local n, v = debug.getlocal(1, 1)
+local n, v = debug.getlocal(1, 0)
 assert(n == "(*temporary)" and v == debug)   -- unkown name but known value
-n, v = debug.getlocal(1, 2)
+n, v = debug.getlocal(1, 1)
 assert(n == "(*temporary)" and v == 12)   -- unkown name but known value
 
 -- a function with an upvalue
 local f = function () local x; return a end
-n, v = debug.getupvalue(f, 1)
+n, v = debug.getupvalue(f, 0)
 assert(n == "(*no name)" and v == 12)
-assert(debug.setupvalue(f, 1, 13) == "(*no name)")
+assert(debug.setupvalue(f, 0, 13) == "(*no name)")
 assert(a == 13)
 
 local t = debug.getinfo(f)

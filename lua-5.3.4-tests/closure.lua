@@ -217,31 +217,31 @@ do
   end
 end
 
+assert(debug.upvalueid(foo1, 0))
 assert(debug.upvalueid(foo1, 1))
-assert(debug.upvalueid(foo1, 2))
-assert(not pcall(debug.upvalueid, foo1, 3))
-assert(debug.upvalueid(foo1, 1) == debug.upvalueid(foo2, 2))
-assert(debug.upvalueid(foo1, 2) == debug.upvalueid(foo2, 1))
-assert(debug.upvalueid(foo3, 1))
-assert(debug.upvalueid(foo1, 1) ~= debug.upvalueid(foo3, 1))
-assert(debug.upvalueid(foo1, 2) == debug.upvalueid(foo3, 2))
+assert(not pcall(debug.upvalueid, foo1, 2))
+assert(debug.upvalueid(foo1, 0) == debug.upvalueid(foo2, 1))
+assert(debug.upvalueid(foo1, 1) == debug.upvalueid(foo2, 0))
+assert(debug.upvalueid(foo3, 0))
+assert(debug.upvalueid(foo1, 0) ~= debug.upvalueid(foo3, 0))
+assert(debug.upvalueid(foo1, 1) == debug.upvalueid(foo3, 1))
 
-assert(debug.upvalueid(string.gmatch("x", "x"), 1) ~= nil)
+assert(debug.upvalueid(string.gmatch("x", "x"), 0) ~= nil)
 
 assert(foo1() == 3 + 5 and foo2() == 5 + 3)
-debug.upvaluejoin(foo1, 2, foo2, 2)
+debug.upvaluejoin(foo1, 1, foo2, 1)
 assert(foo1() == 3 + 3 and foo2() == 5 + 3)
 assert(foo3() == 10 + 5)
-debug.upvaluejoin(foo3, 2, foo2, 1)
+debug.upvaluejoin(foo3, 1, foo2, 0)
 assert(foo3() == 10 + 5)
-debug.upvaluejoin(foo3, 2, foo2, 2)
+debug.upvaluejoin(foo3, 1, foo2, 1)
 assert(foo3() == 10 + 3)
 
-assert(not pcall(debug.upvaluejoin, foo1, 3, foo2, 1))
-assert(not pcall(debug.upvaluejoin, foo1, 1, foo2, 3))
-assert(not pcall(debug.upvaluejoin, foo1, 0, foo2, 1))
-assert(not pcall(debug.upvaluejoin, print, 1, foo2, 1))
-assert(not pcall(debug.upvaluejoin, {}, 1, foo2, 1))
-assert(not pcall(debug.upvaluejoin, foo1, 1, print, 1))
+assert(not pcall(debug.upvaluejoin, foo1, 2, foo2, 0))
+assert(not pcall(debug.upvaluejoin, foo1, 0, foo2, 2))
+assert(not pcall(debug.upvaluejoin, foo1, -1, foo2, 0))
+assert(not pcall(debug.upvaluejoin, print, 0, foo2, 0))
+assert(not pcall(debug.upvaluejoin, {}, 0, foo2, 0))
+assert(not pcall(debug.upvaluejoin, foo1, 0, print, 0))
 
 print'OK'

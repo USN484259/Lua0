@@ -162,34 +162,34 @@ assert(#a == 6)
 
 -- all functions share same 'a'
 for i = 1, 6-1 do
-  assert(debug.upvalueid(a[0], 1) == debug.upvalueid(a[i], 1))
+  assert(debug.upvalueid(a[0], 0) == debug.upvalueid(a[i], 0))
 end
 
 -- 'b' and 'c' are shared among some of them
 for i = 1, 6-1 do
   -- only a[1] uses external 'b'/'b'
+  assert(debug.upvalueid(a[0], 1) ~= debug.upvalueid(a[i], 1))
   assert(debug.upvalueid(a[0], 2) ~= debug.upvalueid(a[i], 2))
-  assert(debug.upvalueid(a[0], 3) ~= debug.upvalueid(a[i], 3))
 end
 
 for i = 2, 5, 2 do
   -- inner functions share 'b'/'c' with previous ones
+  assert(debug.upvalueid(a[i], 1) == debug.upvalueid(a[i - 1], 1))
   assert(debug.upvalueid(a[i], 2) == debug.upvalueid(a[i - 1], 2))
-  assert(debug.upvalueid(a[i], 3) == debug.upvalueid(a[i - 1], 3))
   -- but not with next ones
+  assert(debug.upvalueid(a[i], 1) ~= debug.upvalueid(a[i + 1], 1))
   assert(debug.upvalueid(a[i], 2) ~= debug.upvalueid(a[i + 1], 2))
-  assert(debug.upvalueid(a[i], 3) ~= debug.upvalueid(a[i + 1], 3))
 end
 
 -- only external 'd' is shared
 for i = 1, 6, 2 do
-  assert(debug.upvalueid(a[0], 4) == debug.upvalueid(a[i], 4))
+  assert(debug.upvalueid(a[0], 3) == debug.upvalueid(a[i], 3))
 end
 
 -- internal 'd's are all different
 for i = 2, 5, 2 do
   for j = 0, 6-1 do
-    assert((debug.upvalueid(a[i], 4) == debug.upvalueid(a[j], 4))
+    assert((debug.upvalueid(a[i], 3) == debug.upvalueid(a[j], 3))
       == (i == j))
   end
 end

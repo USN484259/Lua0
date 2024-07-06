@@ -69,7 +69,7 @@ assert(type(f) == 'function')
 
 
 local function getenv (f)
-  local a,b = debug.getupvalue(f, 1)
+  local a,b = debug.getupvalue(f, 0)
   assert(a == '_ENV')
   return b
 end

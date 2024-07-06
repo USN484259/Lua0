@@ -638,7 +638,7 @@ static void set_env (lua_State *L) {
       lua_iscfunction(L, -1))
     luaL_error(L, "'module' not called from a Lua function");
   lua_pushvalue(L, -2);  /* copy new environment table to top */
-  lua_setupvalue(L, -2, 1);
+  lua_setupvalue(L, -2, 0);
   lua_pop(L, 1);  /* remove function */
 }
 

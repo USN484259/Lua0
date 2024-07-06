@@ -1199,8 +1199,8 @@ static const char *aux_upvalue (StkId fi, int n, TValue **val,
   switch (ttype(fi)) {
     case LUA_TCCL: {  /* C closure */
       CClosure *f = clCvalue(fi);
-      if (!(1 <= n && n <= f->nupvalues)) return NULL;
-      *val = &f->upvalue[n-1];
+      if (!(0 <= n && n < f->nupvalues)) return NULL;
+      *val = &f->upvalue[n];
       if (owner) *owner = f;
       return "";
     }
@@ -1208,10 +1208,10 @@ static const char *aux_upvalue (StkId fi, int n, TValue **val,
       LClosure *f = clLvalue(fi);
       TString *name;
       Proto *p = f->p;
-      if (!(1 <= n && n <= p->sizeupvalues)) return NULL;
-      *val = f->upvals[n-1]->v;
-      if (uv) *uv = f->upvals[n - 1];
-      name = p->upvalues[n-1].name;
+      if (!(0 <= n && n < p->sizeupvalues)) return NULL;
+      *val = f->upvals[n]->v;
+      if (uv) *uv = f->upvals[n];
+      name = p->upvalues[n].name;
       return (name == NULL) ? "(*no name)" : getstr(name);
     }
     default: return NULL;  /* not a closure */
@@ -1259,8 +1259,8 @@ static UpVal **getupvalref (lua_State *L, int fidx, int n) {
   StkId fi = index2addr(L, fidx);
   api_check(L, ttisLclosure(fi), "Lua function expected");
   f = clLvalue(fi);
-  api_check(L, (1 <= n && n <= f->p->sizeupvalues), "invalid upvalue index");
-  return &f->upvals[n - 1];  /* get its upvalue pointer */
+  api_check(L, (0 <= n && n < f->p->sizeupvalues), "invalid upvalue index");
+  return &f->upvals[n];  /* get its upvalue pointer */
 }
 
 
@@ -1272,8 +1272,8 @@ LUA_API void *lua_upvalueid (lua_State *L, int fidx, int n) {
     }
     case LUA_TCCL: {  /* C closure */
       CClosure *f = clCvalue(fi);
-      api_check(L, 1 <= n && n <= f->nupvalues, "invalid upvalue index");
-      return &f->upvalue[n - 1];
+      api_check(L, 0 <= n && n < f->nupvalues, "invalid upvalue index");
+      return &f->upvalue[n];
     }
     default: {
       api_check(L, 0, "closure expected");

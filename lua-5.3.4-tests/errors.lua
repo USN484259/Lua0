@@ -140,7 +140,7 @@ checkmessage("a = 1 % 0", "'n%0'")
 _G.D = debug
 checkmessage([[
   -- create light udata
-  local x = D.upvalueid(function () return debug end, 1)
+  local x = D.upvalueid(function () return debug end, 0)
   D.setuservalue(x, {})
 ]], "light userdata")
 _G.D = nil

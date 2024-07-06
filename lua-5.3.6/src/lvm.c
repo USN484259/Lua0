@@ -1194,8 +1194,8 @@ void luaV_execute (lua_State *L) {
           lua_Integer limit = ivalue(ra + 1);
           if ((0 < step) ? (idx <= limit) : (limit <= idx)) {
             ci->u.l.savedpc += GETARG_sBx(i);  /* jump back */
-          chgivalue(ra, idx);  /* update internal index... */
-          setivalue(ra + 3, idx);  /* ...and external index */
+            chgivalue(ra, idx);  /* update internal index... */
+            setivalue(ra + 3, idx);  /* ...and external index */
           }
         }
         else {  /* floating loop */
@@ -1205,8 +1205,8 @@ void luaV_execute (lua_State *L) {
           if (luai_numlt(0, step) ? luai_numle(idx, limit)
                                   : luai_numle(limit, idx)) {
             ci->u.l.savedpc += GETARG_sBx(i);  /* jump back */
-          chgfltvalue(ra, idx);  /* update internal index... */
-          setfltvalue(ra + 3, idx);  /* ...and external index */
+            chgfltvalue(ra, idx);  /* update internal index... */
+            setfltvalue(ra + 3, idx);  /* ...and external index */
           }
         }
         vmbreak;

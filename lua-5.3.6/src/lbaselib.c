@@ -269,7 +269,7 @@ static int load_aux (lua_State *L, int status, int envidx) {
   if (status == LUA_OK) {
     if (envidx != 0) {  /* 'env' parameter? */
       lua_pushvalue(L, envidx);  /* environment for loaded function */
-      if (!lua_setupvalue(L, -2, 1))  /* set it as 1st upvalue */
+      if (!lua_setupvalue(L, -2, 0))  /* set it as 1st upvalue */
         lua_pop(L, 1);  /* remove 'env' if not used by previous call */
     }
     return 1;

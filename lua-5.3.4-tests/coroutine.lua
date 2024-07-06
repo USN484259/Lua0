@@ -387,13 +387,13 @@ else
     end)
 
     assert(coroutine.resume(c, 1, 2, 3))   -- start coroutine
-    local n,v = debug.getlocal(c, 0, 1)    -- check its local
+    local n,v = debug.getlocal(c, 0, 0)    -- check its local
     assert(n == "a" and v == 1)
     n,v = debug.getlocal(c, 0, -1)         -- check varargs
     assert(v == 2)
     n,v = debug.getlocal(c, 0, -2)
     assert(v == 3)
-    assert(debug.setlocal(c, 0, 1, 10))     -- test 'setlocal'
+    assert(debug.setlocal(c, 0, 0, 10))     -- test 'setlocal'
     assert(debug.setlocal(c, 0, -2, 20))
     local t = debug.getinfo(c, 0)        -- test 'getinfo'
     assert(t.currentline == t.linedefined + 1)
@@ -411,7 +411,7 @@ else
     local a, b = coroutine.resume(c)
     assert(a and b == 20)
     assert(debug.getinfo(c, 0).linedefined == -1)
-    a, b = debug.getlocal(c, 0, 2)
+    a, b = debug.getlocal(c, 0, 1)
     assert(b == 10)
   end
 
@@ -670,7 +670,7 @@ do local _ENV = _ENV
   f = function () AAA = BBB + 1; return AAA end
 end
 g = new(10); g.k.BBB = 10;
-debug.setupvalue(f, 1, g)
+debug.setupvalue(f, 0, g)
 assert(run(f, {"idx", "nidx", "idx"}) == 11)
 assert(g.k.AAA == 11)
 

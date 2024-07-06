@@ -283,8 +283,8 @@ local function h ()
 end
 local d = string.dump(h)
 x = load(d, "", "b")
-assert(debug.getupvalue(x, 2) == '_ENV')
-debug.setupvalue(x, 2, _G)
+assert(debug.getupvalue(x, 1) == '_ENV')
+debug.setupvalue(x, 1, _G)
 assert(x() == 123)
 
 assert(assert(load("return XX + ...", nil, nil, {XX = 13}))(4) == 17)
@@ -313,10 +313,10 @@ x = load(string.dump(function (x)
   end
 end), "", "b", nil)
 assert(x() == nil)
-assert(debug.setupvalue(x, 1, "hi") == "a")
+assert(debug.setupvalue(x, 0, "hi") == "a")
 assert(x() == "hi")
-assert(debug.setupvalue(x, 2, 13) == "b")
-assert(not debug.setupvalue(x, 3, 10))   -- only 2 upvalues
+assert(debug.setupvalue(x, 1, 13) == "b")
+assert(not debug.setupvalue(x, 2, 10))   -- only 2 upvalues
 x("set")
 assert(x() == 23)
 x("set")
@@ -340,8 +340,8 @@ do
   f = load(string.dump(f))   -- main chunk now has many upvalues
   local a = 10
   local h = function () return a end
-  for i = 1, nup do
-    debug.upvaluejoin(f, i, h, 1)
+  for i = 0, nup-1 do
+    debug.upvaluejoin(f, i, h, 0)
   end
   assert(f() == 10 * nup)
 end
